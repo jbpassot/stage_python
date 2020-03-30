@@ -11,7 +11,7 @@ SET( APIVERSION ${V_MAJOR}.${V_MINOR} )
 # minimum version of Player to build the plugin
 SET( MIN_PLAYER 2.1.0 )
 
-OPTION (BUILD_PLAYER_PLUGIN "Build Player plugin" ON)
+OPTION (BUILD_PLAYER_PLUGIN "Build Player plugin" OFF)
 OPTION (BUILD_LSPTEST "Build Player plugin tests" OFF)
 OPTION (CPACK_CFG "[release building] generate CPack configuration files" ON)
 
@@ -155,7 +155,7 @@ ADD_SUBDIRECTORY(libstage)
 ADD_SUBDIRECTORY(examples)
 ADD_SUBDIRECTORY(assets)
 ADD_SUBDIRECTORY(worlds)
-#ADD_SUBDIRECTORY(avonstage)		 
+#ADD_SUBDIRECTORY(avonstage)
 
 IF ( BUILD_PLAYER_PLUGIN )
   # Player does not have a CMake package, but does provide pkgconfig info
