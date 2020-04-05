@@ -36,7 +36,7 @@ floorplan
 (
   name "uoa_robotics_lab"
   # The actual size of the lab
-  size [6.27 15.7 2]
+  size [6.270 15.700 2.000]
   pose [0.000 0.000 0.000 0.000]
   bitmap "bitmaps/uoa_robotics_lab.png"
 )
@@ -44,6 +44,7 @@ floorplan
 define autorob fancypioneer2dx
 (
  color "red"
+ ctrl "wander"
  fancysicklaser( pose [ 0.040 0.000 0.000 0.000 ] samples 32 ) 
 
  blinkenlight( pose [ 0.150 0.100 0.000 0.000 ] color "red" )
@@ -51,7 +52,7 @@ define autorob fancypioneer2dx
  blinkenlight( pose [ 0.150 -0.100 0.000  0.000 ] color "blue" )
 )
 
-autorob( pose [0.000 0.000 0.000 0.000] name "r0" )
+autorob( pose [0.026 -1.322 0.000 -93.575] name "r0" )
 
 define t table
 (
@@ -88,7 +89,7 @@ c2(pose [ 1.655 -2.070 0.000 0.000 ])
 c2(pose [ 1.904 -0.260 0.000 179.518 ])
 c2(pose [ -1.267 1.458 0.000 177.617 ])
 c2(pose [ -1.481 -0.222 0.000 0.000 ])
-c2(pose [ 0.67 -3.58 0.000 0.000 ])
+c2(pose [ 0.670 -3.580 0.000 0.000 ])
 c2(pose [ -1.489 2.975 0.000 0.000 ])
 c2(pose [ -1.472 6.475 0.000 0.000 ])
 c2(pose [ 1.787 2.974 0.000 -177.617 ])

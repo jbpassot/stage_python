@@ -220,9 +220,9 @@ bool ModelCamera::GetFrame(void)
 // measurement and create a square
 void ModelCamera::DataVisualize(Camera *)
 {
-  if (_frame_data == NULL || !showCameraData)
+  if (_frame_data == NULL || !showCameraData){
     return;
-
+  }
   float w_fov = _camera.horizFov();
   float h_fov = _camera.vertFov();
 

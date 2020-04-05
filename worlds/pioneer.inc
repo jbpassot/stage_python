@@ -105,7 +105,7 @@ define p3at_sonar ranger
 
 define pioneer_base position 
 (
-  color "red"			# Default color.
+  color "blue"			# Default color.
   drive "diff"		 	# Differential steering model.
   gui_nose 1                  	# Draw a nose on the robot so we can see which way it points
   obstacle_return 1           	# Can hit things.

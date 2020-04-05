@@ -199,6 +199,7 @@ void ModelPosition::Load(void)
   if (wf->PropertyExists(wf_entity, "velocity"))
     SetVelocity(GetVelocity().Load(wf, wf_entity, "velocity"));
 
+
   // load steering mode
   if (wf->PropertyExists(wf_entity, "drive")) {
     const std::string &mode_str = wf->ReadString(wf_entity, "drive", "diff");

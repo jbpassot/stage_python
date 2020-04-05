@@ -245,6 +245,56 @@ WorldGui::WorldGui(int width, int height, const char *caption)
   position((Fl::w() - w()) / 2, (Fl::h() - h()) / 2);
 }
 
+
+int WorldGui::handle(int e)
+{
+    switch(e) {
+        case FL_KEYDOWN:
+            if (Fl::event_key() == 'w'){
+                linear = 1;
+                //move_cb.first(this, move_cb.second);
+                return 0;
+            }else if (Fl::event_key() == 's'){
+                linear = -1;
+                return 0;
+            }else if (Fl::event_key() == 'a'){
+                angular = -1;
+                return 0;
+            }else if (Fl::event_key() == 'd'){
+                angular = 1;
+                return 0;
+            }else{
+                return Fl_Window::handle(e);
+            }
+        case FL_KEYUP:
+            if (Fl::event_key() == 'w'){
+                linear = 0;
+                return 0;
+            }else if (Fl::event_key() == 's'){
+                linear = 0;
+                return 0;
+            }else if (Fl::event_key() == 'a'){
+                angular = 0;
+                return 0;
+            }else if (Fl::event_key() == 'd'){
+                angular = 0;
+                return 0;
+            }else{
+                return Fl_Window::handle(e);
+            }
+        default:
+            return Fl_Window::handle(e);
+    };
+}
+
+void WorldGui::AddMoveCallback(world_callback_t cb, void *user)
+{
+    move_cb = std::pair<world_callback_t, void *>(cb, user);
+}
+
+
+
+
 WorldGui::~WorldGui()
 {
   if (mbar)
@@ -406,6 +456,7 @@ static void UpdateCallback(WorldGui *world)
 
 bool WorldGui::Update()
 {
+
   if (speedup > 0)
     Fl::repeat_timeout((sim_interval / 1e6) / speedup, (Fl_Timeout_Handler)UpdateCallback, this);
   // else we're called by an idle callback
@@ -628,8 +679,7 @@ void WorldGui::fasttimeCb(Fl_Widget *, WorldGui *wg)
 
 void WorldGui::Redraw()
 {
-  // puts( "redrawing\n" );
-  canvas->redraw();
+    canvas->redraw();
 }
 
 void WorldGui::Start()

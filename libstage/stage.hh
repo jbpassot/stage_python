@@ -861,7 +861,6 @@ protected:
 public:
   uint64_t UpdateCount() { return updates; }
   bool paused; ///< if true, the simulation is stopped
-
   virtual void Start() { paused = false; }
   virtual void Stop() { paused = true; }
   virtual void TogglePause() { paused ? Start() : Stop(); }
@@ -1496,6 +1495,7 @@ public:
   WorldGui(int width, int height, const char *caption = NULL);
   ~WorldGui();
 
+  int linear, angular =0;
   /** Forces the window to be redrawn, even if paused.*/
   virtual void Redraw(void);
 
@@ -1523,6 +1523,11 @@ public:
   /** Get human readable string that describes the current global energy state. */
   std::string EnergyString(void) const;
   virtual void RemoveChild(Model *mod);
+  virtual int handle(int e);
+
+  std::pair<world_callback_t, void *> move_cb; ///< List of callback functions and arguments
+
+  void AddMoveCallback(world_callback_t cb, void *user);
 
   bool IsTopView();
 };

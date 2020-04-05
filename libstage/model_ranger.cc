@@ -151,6 +151,10 @@ void ModelRanger::Sensor::Load(Worldfile *wf, int entity)
   fov = wf->ReadAngle(entity, "fov", fov);
   sample_count = wf->ReadInt(entity, "samples", sample_count);
 
+  ranges.resize(sample_count);
+  intensities.resize(sample_count);
+  bearings.resize(sample_count);
+
   wf->ReadTuple(entity, "noise", 0, 3, "lfa", &range_noise_const, &range_noise, &angle_noise);
   color.Load(wf, entity);
 }

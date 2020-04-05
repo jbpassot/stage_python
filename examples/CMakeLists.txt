@@ -1,1 +1,2 @@
 ADD_SUBDIRECTORY(ctrl)
+ADD_SUBDIRECTORY(libstage)

@@ -82,7 +82,7 @@ extern "C" int Init(Model *mod, CtrlArgs *)
 // inspect the ranger data and decide what to do
 int LaserUpdate(Model *, robot_t *robot)
 {
-  // get the data
+    // get the data
   const std::vector<meters_t> &scan = robot->laser->GetSensors()[0].ranges;
   uint32_t sample_count = scan.size();
   if (sample_count < 1)
@@ -95,6 +95,11 @@ int LaserUpdate(Model *, robot_t *robot)
   // there's anything in front
   double minleft = 1e6;
   double minright = 1e6;
+
+    //PRINT_ERR("  Failed to find a ranger with more than 8 samples. Exit.");
+    //robot->pos->SetXSpeed(0);
+    //robot->pos->SetTurnSpeed(1);
+    //return 0;
 
   for (uint32_t i = 0; i < sample_count; i++) {
     if (verbose)
@@ -158,6 +163,7 @@ int LaserUpdate(Model *, robot_t *robot)
     robot->pos->SetXSpeed(cruisespeed);
     robot->pos->SetTurnSpeed(0);
   }
+
 
   //  if( robot->pos->Stalled() )
   // 	 {

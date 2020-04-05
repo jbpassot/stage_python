@@ -409,7 +409,7 @@ void World::LoadWorldPostHook()
 
   this->show_clock_interval = wf->ReadInt(0, "show_clock_interval", this->show_clock_interval);
 
-  // read msec instead of usec: easier for user
+  //read msec instead of usec: easier for user
   this->sim_interval = 1e3 * wf->ReadFloat(0, "interval_sim", this->sim_interval / 1e3);
 
   this->worker_threads = wf->ReadInt(0, "threads", this->worker_threads);
@@ -628,6 +628,11 @@ bool World::Update()
     models_with_fiducials_byy.insert(*it);
   }
 
+    /* JB: Moved here */
+    // update the position of all position models based on their velocity
+    // while sensor models are running in other threads
+    FOR_EACH (it, active_velocity)
+        (*it)->Move();
   // printf( "x %lu y %lu\n", models_with_fiducials_byy.size(),
   //			models_with_fiducials_byx.size() );
 
@@ -644,8 +649,8 @@ bool World::Update()
 
   // update the position of all position models based on their velocity
   // while sensor models are running in other threads
-  FOR_EACH (it, active_velocity)
-    (*it)->Move();
+  //FOR_EACH (it, active_velocity)
+  //  (*it)->Move();
 
   pthread_mutex_lock(&sync_mutex);
   // wait for all the last update job to complete - it will
@@ -656,7 +661,6 @@ bool World::Update()
   }
   pthread_mutex_unlock(&sync_mutex);
   // puts( "main thread awakes" );
-
   // TODO: allow threadsafe callbacks to be called in worker
   // threads
 
@@ -666,7 +670,6 @@ bool World::Update()
 
   // world callbacks
   CallUpdateCallbacks();
-
   FOR_EACH (it, active_energy)
     (*it)->UpdateCharge();
 

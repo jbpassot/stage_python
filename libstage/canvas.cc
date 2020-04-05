@@ -60,14 +60,14 @@ Canvas::Canvas(WorldGui *world, int x, int y, int width, int height)
       showBlocks("Blocks", "show_blocks", "b", true, world),
       showBlur("Trails/Blur", "show_trailblur", "^d", false, world),
       showClock("Clock", "show_clock", "c", true, world),
-      showData("Data", "show_data", "d", false, world),
+      showData("Data", "show_data", "e", false, world),
       showFlags("Flags", "show_flags", "l", true, world),
       showFollow("Follow", "show_follow", "f", false, world),
       showFootprints("Footprints", "show_footprints", "o", false, world),
       showGrid("Grid", "show_grid", "g", true, world),
       showOccupancy("Debug/Occupancy", "show_occupancy", "^o", false, world),
       showScreenshots("Save screenshots", "screenshots", "", false, world),
-      showStatus("Status", "show_status", "s", true, world),
+      showStatus("Status", "show_status", "q", true, world),
       showTrailArrows("Trails/Rising Arrows", "show_trailarrows", "^a", false, world),
       showTrailRise("Trails/Rising blocks", "show_trailrise", "^r", false, world),
       showTrails("Trails/Fast", "show_trailfast", "^f", false, world),
@@ -1137,6 +1137,7 @@ void Canvas::createMenuItems(Fl_Menu_Bar *menu, std::string path)
   showFlags.createMenuItem(menu, path);
   showFollow.createMenuItem(menu, path);
   showFootprints.createMenuItem(menu, path);
+  showFootprints.createMenuItem(menu, path);
   showGrid.createMenuItem(menu, path);
   showStatus.createMenuItem(menu, path);
   pCamOn.createMenuItem(menu, path);
@@ -1216,7 +1217,7 @@ void Canvas::draw()
   // Enable the following to debug camera model
   //	if( loaded_texture == true && pCamOn == true )
   //		return;
-
+  //PRINT_ERR("Canvas Draw\n");
   if (!valid()) {
     if (!init_done)
       InitGl();

@@ -36,7 +36,15 @@ public:
     return 0;
   }
 
-  explicit Logic(unsigned int popsize)
+    static int MoveCallback(Stg::World *world, void *userarg)
+    {
+
+        PRINT_ERR("In move Callback\n");
+        return 0;
+    }
+
+
+    explicit Logic(unsigned int popsize)
       : population_size(popsize), robots(new Robot[population_size])
   {
   }
@@ -65,19 +73,40 @@ public:
       robots[idx].ranger = rngmod;
       robots[idx].ranger->Subscribe();
     }
+      Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
 
+    world_gui->AddMoveCallback(Logic::MoveCallback, reinterpret_cast<void *>(this));
     // register with the world
     world->AddUpdateCallback(Logic::Callback, reinterpret_cast<void *>(this));
   }
 
+
   ~Logic() { delete[] robots; }
-  void Tick(Stg::World *)
+  void Tick(Stg::World * world)
   {
-    // the controllers parameters
+      //PRINT_ERR("Tick\n");
+      Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
+      //world_gui->Redraw();
+      //world_gui->NeedRedraw();
+      double left_wheel_velocity_meter, right_wheel_velocity_meter, wheel_distance;
+      left_wheel_velocity_meter = 0.3;
+      right_wheel_velocity_meter = 0.;
+      wheel_distance = 0.5;
+
+      double brainos_forward_speed = (left_wheel_velocity_meter + right_wheel_velocity_meter) / 2.;
+      double brainos_angular_speed = (left_wheel_velocity_meter - right_wheel_velocity_meter) / wheel_distance;
+
+
+      brainos_forward_speed = world_gui->linear*1.5;
+      brainos_angular_speed = -world_gui->angular*0.5;
+
+      // the controllers parameters
     const double vspeed = 0.4; // meters per second
     const double wgain = 1.0; // turn speed gain
     const double safe_dist = 0.1; // meters
     const double safe_angle = 0.3; // radians
+
+    //usleep(10000);
 
     // each robot has a group of ir sensors
     // each sensor takes one sample
@@ -124,7 +153,7 @@ public:
       // turn the sensor input into movement commands
 
       // move forwards if the front is clear
-      const double forward_speed = front_clear ? vspeed : 0.0;
+      const double forward_speed = front_clear ? vspeed : 0.1;
       // do not strafe
       const double side_speed = 0.0;
 
@@ -132,7 +161,7 @@ public:
       const double turn_speed = wgain * resultant_angle;
 
       // finally, relay the commands to the robot
-      robots[idx].position->SetSpeed(forward_speed, side_speed, turn_speed);
+      robots[idx].position->SetSpeed(brainos_forward_speed, side_speed, brainos_angular_speed);
     }
   }
 
