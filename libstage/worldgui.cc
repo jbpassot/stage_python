@@ -483,7 +483,15 @@ bool WorldGui::Update()
     Stop();
   }
 
-  return done;
+  if (this->number_of_steps_to_run>0){
+      this->number_of_steps_to_run--;
+  }
+  if (this->number_of_steps_to_run ==0) {
+      this->number_of_steps_to_run = -1;
+      Stop();
+  }
+
+    return done;
 }
 
 std::string WorldGui::ClockString() const
@@ -558,6 +566,13 @@ void WorldGui::DrawVoxels() const
   FOR_EACH (it, superregions)
     it->second->DrawVoxels(layer);
 }
+
+void WorldGui::UnpauseForNumSteps(int steps)
+{
+    this->number_of_steps_to_run = steps;
+    this->Start();
+}
+
 
 void WorldGui::windowCb(Fl_Widget *, WorldGui *wg)
 {
@@ -733,6 +748,7 @@ void WorldGui::onceCb(Fl_Widget *, WorldGui *wg)
   // run exactly once
   wg->World::Update();
 }
+
 
 void WorldGui::viewOptionsCb(OptionsDlg *, WorldGui *wg)
 {

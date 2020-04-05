@@ -1424,6 +1424,8 @@ class WorldGui : public World, public Fl_Window {
   friend class Option;
 
 private:
+
+  int number_of_steps_to_run = -1;
   Canvas *canvas;
   std::vector<Option *> drawOptions;
   FileManager *fileMan; ///< Used to load and save worldfiles
@@ -1511,6 +1513,8 @@ public:
 
   virtual void Start();
   virtual void Stop();
+
+  void UnpauseForNumSteps(int steps);
 
   usec_t RealTimeNow(void) const;
 

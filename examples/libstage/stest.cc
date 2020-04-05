@@ -82,8 +82,7 @@ public:
 
 
   ~Logic() { delete[] robots; }
-  void Tick(Stg::World * world)
-  {
+  void Tick(Stg::World * world) {
       //PRINT_ERR("Tick\n");
       Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
       //world_gui->Redraw();
@@ -97,8 +96,14 @@ public:
       double brainos_angular_speed = (left_wheel_velocity_meter - right_wheel_velocity_meter) / wheel_distance;
 
 
-      brainos_forward_speed = world_gui->linear*1.5;
-      brainos_angular_speed = -world_gui->angular*0.5;
+      brainos_forward_speed = world_gui->linear * 1.5;
+      brainos_angular_speed = -world_gui->angular * 0.5;
+
+      /*
+      if (brainos_forward_speed != 0 || brainos_angular_speed != 0) {
+          printf("Run for %d steps\n", 50);
+          world_gui->UnpauseForNumSteps(50);
+      }*/
 
       // the controllers parameters
     const double vspeed = 0.4; // meters per second
