@@ -205,11 +205,13 @@ void World::Run()
     // FLTK
     // is a piece of crap):
     while (Fl::first_window() && !World::quit_all) {
-      Fl::wait();
+        Fl::wait();
     }
   } else {
-    while (!UpdateAll())
-      ;
+    while (!UpdateAll()){
+
+        ;
+    }
   }
 }
 

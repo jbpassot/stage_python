@@ -16,6 +16,8 @@
 #include <cmath>
 
 #include "stage.hh"
+#include <boost/python.hpp>
+using namespace boost::python;
 
 class Robot {
 public:
@@ -174,6 +176,61 @@ protected:
   unsigned int population_size;
   Robot *robots;
 };
+
+struct StageSimulator
+{
+    StageSimulator(std::string world_file): world_file(world_file) {
+        // initialize libstage
+        int argc = 3;
+        char* argv[3];
+        argv[0] = "stage";
+        argv[1] = (char *) world_file.c_str();
+        argv[2] = "1";
+        int popsize = 1;
+        char ** a = argv;
+        pthread_t cThread;
+
+        Stg::Init(&argc, &a);
+
+        // create the world
+        world = new Stg::WorldGui(800, 700, "Stage Benchmark Program");
+
+        // normal posix pthread C function pointer
+        typedef void *(*func_ptr)(void *);
+        pthread_create(&cThread, NULL,  (func_ptr)StageSimulator::run, world);
+        //sleep(1);
+
+    } // added constructor
+    //static void run(void * world_param){
+        //Stg::WorldGui * world = reinterpret_cast<Stg::WorldGui *>(world_param);
+    static void run(Stg::WorldGui * world){
+
+        // create the world
+        //world = new Stg::WorldGui(800, 700, "Stage Benchmark Program");
+        world->Load("/home/jb/projects/stage4/Stage/worlds/benchmark/hospital_2.world");
+        // create the logic and connect it to the world
+        Logic logic(1);
+        logic.connect(world);
+        world->Run();
+    }
+
+    uint64_t get_info(){
+        world->UnpauseForNumSteps(20);
+        return world->GetUpdateCount();
+    }
+
+    std::string world_file;
+    Stg::WorldGui * world;
+};
+
+
+BOOST_PYTHON_MODULE(stagesim)
+{
+    class_<StageSimulator>("StageSimulator", init<std::string>())
+            .def("run", &StageSimulator::run)
+            .def("get_info", &StageSimulator::get_info)
+            ;
+}
 
 int main(int argc, char *argv[])
 {
