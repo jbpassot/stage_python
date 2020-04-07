@@ -69,7 +69,7 @@ private:
       showBBoxes,
       showBlocks, showBlur, showClock, showData, showFlags, showFollow, showFootprints, showGrid,
       showOccupancy, showScreenshots, showStatus, showTrailArrows, showTrailRise, showTrails,
-      showVoxels, pCamOn, visualizeAll;
+      showVoxels, pCamOn, visualizeAll, pUpOn;
 
 public:
   Canvas(WorldGui *world, int x, int y, int width, int height);

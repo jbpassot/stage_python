@@ -22,7 +22,7 @@ using namespace Stg;
 #include <sstream>
 
 // TODO make instance attempt to register an option (as customvisualizations do)
-Option ModelCamera::showCameraData("Show Camera Data", "show_camera", "", true, NULL);
+Option ModelCamera::showCameraData("Show Camera Data", "show_camera", "", false, NULL);
 
 static const Stg::Size DEFAULT_SIZE(0.1, 0.07, 0.05);
 static const char DEFAULT_GEOM_COLOR[] = "black";
@@ -220,6 +220,7 @@ bool ModelCamera::GetFrame(void)
 // measurement and create a square
 void ModelCamera::DataVisualize(Camera *)
 {
+
   if (_frame_data == NULL || !showCameraData){
     return;
   }

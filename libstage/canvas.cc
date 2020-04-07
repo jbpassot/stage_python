@@ -73,6 +73,7 @@ Canvas::Canvas(WorldGui *world, int x, int y, int width, int height)
       showTrails("Trails/Fast", "show_trailfast", "^f", false, world),
       showVoxels("Debug/Voxels", "show_voxels", "^v", false, world),
       pCamOn("Perspective camera", "pcam_on", "r", false, world),
+      pUpOn("Cool Follow", "pcam_up", "1", true, world),
       visualizeAll("Selected only", "vis_all", "v", false, world),
       // and the rest
       graphics(true), world(world), frames_rendered_count(0), screenshot_frame_skip(1)
@@ -1137,9 +1138,9 @@ void Canvas::createMenuItems(Fl_Menu_Bar *menu, std::string path)
   showFlags.createMenuItem(menu, path);
   showFollow.createMenuItem(menu, path);
   showFootprints.createMenuItem(menu, path);
-  showFootprints.createMenuItem(menu, path);
   showGrid.createMenuItem(menu, path);
   showStatus.createMenuItem(menu, path);
+  pUpOn.createMenuItem(menu, path);
   pCamOn.createMenuItem(menu, path);
   pCamOn.menuCallback(perspectiveCb, this);
   showOccupancy.createMenuItem(menu, path);
@@ -1241,7 +1242,10 @@ void Canvas::draw()
   if (showFollow && last_selection) {
     Pose gpose = last_selection->GetGlobalPose();
     if (pCamOn == true) {
-      perspective_camera.setPose(gpose.x, gpose.y, 0.2);
+        if (pUpOn == true)
+          perspective_camera.setPose(gpose.x - 1.5*cos(gpose.a), gpose.y- 1.5*sin(gpose.a), 1.5);
+        else
+            perspective_camera.setPose(gpose.x, gpose.y, 0.3);
       perspective_camera.setYaw(rtod(gpose.a) - 90.0);
     } else {
       camera.setPose(gpose.x, gpose.y);

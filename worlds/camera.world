@@ -64,6 +64,7 @@ pioneer2dx
     fov [ 60 45 ]
     pantilt [ 0 0 ]
     alwayson 1
+    update_interval 1000
   )
 
 )
