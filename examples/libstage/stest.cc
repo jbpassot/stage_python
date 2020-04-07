@@ -17,7 +17,45 @@
 
 #include "stage.hh"
 #include <boost/python.hpp>
+#include <numpy/ndarrayobject.h>
+//#include <numpy/arrayobject.h>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 using namespace boost::python;
+
+typedef std::vector<double> DoubleVectorType;
+
+boost::python::object stdVecToNumpyArray( std::vector<double> const& vec )
+{
+   npy_intp size = vec.size();
+
+    /* const_cast is rather horrible but we need a writable pointer
+       in C++11, vec.data() will do the trick
+       but you will still need to const_cast
+     */
+
+    double * data = size ? const_cast<double *>(&vec[0])
+                         : static_cast<double *>(NULL);
+
+    // create a PyObject * from pointer and data
+
+    npy_intp dims[1];
+    dims[0] = size;
+
+    PyObject * pyObj = PyArray_SimpleNewFromData( 1, dims, NPY_DOUBLE, data );
+
+    boost::python::handle<> handle( pyObj );
+
+    boost::python::numeric::array arr( handle );
+
+    /* The problem of returning arr is twofold: firstly the user can modify
+      the data which will betray the const-correctness
+      Secondly the lifetime of the data is managed by the C++ API and not the
+      lifetime of the numpy array whatsoever. But we have a simple solution..
+     */
+
+    return arr.copy(); // copy the object. numpy owns the copy now.
+}
+
 
 class Robot {
 public:
@@ -26,6 +64,7 @@ public:
 };
 
 class Logic {
+  Logic(): scan(){}
   Logic(const Logic &) {}
 public:
   static int Callback(Stg::World *world, void *userarg)
@@ -51,7 +90,20 @@ public:
   {
   }
 
-  void connect(Stg::World *world)
+  Stg::Velocity get_odometry_data(){
+    return velocity;
+  }
+
+  std::vector<Stg::meters_t> get_lidar_data(){
+    return scan;
+  }
+
+  void get_camera_data(){
+
+  }
+
+
+    void connect(Stg::World *world)
   {
     // connect the first population_size robots to this controller
     for (unsigned int idx = 0; idx < population_size; idx++) {
@@ -69,9 +121,8 @@ public:
 
       // get the robot's ranger model and subscribe to it
       Stg::ModelRanger *rngmod =
-          reinterpret_cast<Stg::ModelRanger *>(robots[idx].position->GetChild("ranger:0"));
+          reinterpret_cast<Stg::ModelRanger *>(robots[idx].position->GetChild("ranger:1"));
       assert(rngmod != 0);
-
       robots[idx].ranger = rngmod;
       robots[idx].ranger->Subscribe();
     }
@@ -85,10 +136,15 @@ public:
 
   ~Logic() { delete[] robots; }
   void Tick(Stg::World * world) {
-      //PRINT_ERR("Tick\n");
+
+      //Step 1. Read status of the robot
+      velocity = robots[0].position-> GetVelocity();
+      scan = robots[0].ranger->GetSensors()[0].ranges;
+
       Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
       //world_gui->Redraw();
       //world_gui->NeedRedraw();
+
       double left_wheel_velocity_meter, right_wheel_velocity_meter, wheel_distance;
       left_wheel_velocity_meter = 0.3;
       right_wheel_velocity_meter = 0.;
@@ -101,12 +157,15 @@ public:
       brainos_forward_speed = world_gui->linear * 1.5;
       brainos_angular_speed = -world_gui->angular * 0.5;
 
+      robots[0].position->SetSpeed(brainos_forward_speed, 0., brainos_angular_speed);
+
       /*
       if (brainos_forward_speed != 0 || brainos_angular_speed != 0) {
           printf("Run for %d steps\n", 50);
           world_gui->UnpauseForNumSteps(50);
       }*/
 
+        /*
       // the controllers parameters
     const double vspeed = 0.4; // meters per second
     const double wgain = 1.0; // turn speed gain
@@ -170,16 +229,26 @@ public:
       // finally, relay the commands to the robot
       robots[idx].position->SetSpeed(brainos_forward_speed, side_speed, brainos_angular_speed);
     }
+    */
   }
 
 protected:
   unsigned int population_size;
   Robot *robots;
+
+    Stg::Velocity velocity;
+    Stg::ModelRanger *rgr;
+    std::vector<double> scan;
+    //std::vector<Stg::meters_t> *scan;
+
 };
 
 struct StageSimulator
 {
     StageSimulator(std::string world_file): world_file(world_file) {
+
+
+
         // initialize libstage
         int argc = 3;
         char* argv[3];
@@ -197,38 +266,68 @@ struct StageSimulator
 
         // normal posix pthread C function pointer
         typedef void *(*func_ptr)(void *);
-        pthread_create(&cThread, NULL,  (func_ptr)StageSimulator::run, world);
+
+        logic = new Logic(1);
+
+        std::pair<Stg::WorldGui *, Logic * > * params = new std::pair<Stg::WorldGui *, Logic * >(world, logic);
+        pthread_create(&cThread, NULL,  (func_ptr)StageSimulator::run, params);
         //sleep(1);
 
     } // added constructor
     //static void run(void * world_param){
         //Stg::WorldGui * world = reinterpret_cast<Stg::WorldGui *>(world_param);
-    static void run(Stg::WorldGui * world){
+       //static void run(Stg::WorldGui * world){
+       static void run(std::pair<Stg::WorldGui *, Logic * > * params){
+
+        Stg::WorldGui * world = params->first;
+        Logic * logic = params->second;
 
         // create the world
         //world = new Stg::WorldGui(800, 700, "Stage Benchmark Program");
         world->Load("/home/jb/projects/stage4/Stage/worlds/benchmark/hospital_2.world");
+
         // create the logic and connect it to the world
-        Logic logic(1);
-        logic.connect(world);
+        //logic = new Logic(1);
+        logic->connect(world);
         world->Run();
     }
 
-    uint64_t get_info(){
-        world->UnpauseForNumSteps(20);
-        return world->GetUpdateCount();
+
+    DoubleVectorType get_odom(){
+         Stg::Velocity velocity = logic->get_odometry_data();
+         DoubleVectorType odom;
+         odom.push_back(velocity.x);
+         odom.push_back(velocity.y);
+         odom.push_back(velocity.a);
+         return odom;
+    }
+
+    boost::python::object get_scan(){
+        std::vector<double> lidar =  logic->get_lidar_data();
+        if (lidar.size() == 0) lidar.push_back(0.);
+        return (stdVecToNumpyArray(lidar));
     }
 
     std::string world_file;
     Stg::WorldGui * world;
+    Logic * logic;
 };
 
 
 BOOST_PYTHON_MODULE(stagesim)
 {
+
+    Py_Initialize();
+    import_array()
+    numeric::array::set_module_and_type("numpy", "ndarray");
+
+    class_<DoubleVectorType>("DoubleVectorType")
+            .def(vector_indexing_suite<DoubleVectorType>() );
+
     class_<StageSimulator>("StageSimulator", init<std::string>())
             .def("run", &StageSimulator::run)
-            .def("get_info", &StageSimulator::get_info)
+            .def("get_odom", &StageSimulator::get_odom)
+            .def("get_scan", &StageSimulator::get_scan)
             ;
 }
 
