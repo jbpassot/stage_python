@@ -23,6 +23,21 @@
 using namespace boost::python;
 
 typedef std::vector<double> DoubleVectorType;
+typedef std::vector<int> IntVectorType;
+
+
+class DifferentialDriveState
+{
+public:
+    Stg::usec_t timestamp_us;
+    double traction_left_distance_mm;
+    double traction_right_distance_mm;
+    double heading_angle_rad;
+    double angular_velocity_rad_per_sec;
+
+    DifferentialDriveState() : timestamp_us(0), traction_left_distance_mm(0.), traction_right_distance_mm(0.), heading_angle_rad(0.), angular_velocity_rad_per_sec(0.)
+    {}
+};
 
 boost::python::object stdVecToNumpyArray( std::vector<double> const& vec )
 {
@@ -136,6 +151,15 @@ public:
     return depth_data;
   }
 
+
+    int get_camera_width(){
+      return camera_width;
+    }
+
+    int get_camera_height(){
+      return camera_height;
+    }
+
     void connect(Stg::World *world)
   {
     // connect the first population_size robots to this controller
@@ -157,7 +181,11 @@ public:
         Stg::ModelCamera *cammod =
                 reinterpret_cast<Stg::ModelCamera *>(robots[idx].position->GetChild("camera:0"));
         robots[idx].camera = cammod;
+
+
         if (cammod)
+            camera_width = robots[idx].camera->getWidth();
+            camera_height = robots[idx].camera->getHeight();
             robots[idx].camera->Subscribe();
 
                 // get the robot's ranger model and subscribe to it
@@ -181,6 +209,14 @@ public:
       //Step 1. Read status of the robot
       velocity = robots[0].position-> GetVelocity();
       scan = robots[0].ranger->GetSensors()[0].ranges;
+      const double interval((double)world->sim_interval / 1e6);
+
+      robot_state.timestamp_us = world->SimTimeNow();
+      robot_state.traction_left_distance_mm += wheel_distance* (2*velocity.x + velocity.a) / 2.;
+      robot_state.traction_right_distance_mm += wheel_distance* (2*velocity.x - velocity.a) / 2.;
+      robot_state.angular_velocity_rad_per_sec = velocity.a;
+      robot_state.heading_angle_rad += velocity.a * interval;
+
 
       if (robots[0].camera != NULL) {
           float *depth_data_camera = (float *) robots[0].camera->FrameDepth();
@@ -204,7 +240,6 @@ public:
 
       double brainos_forward_speed = (left_wheel_velocity_meter + right_wheel_velocity_meter) / 2.;
       double brainos_angular_speed = (left_wheel_velocity_meter - right_wheel_velocity_meter) / wheel_distance;
-
 
       brainos_forward_speed = world_gui->linear * 1.5;
       brainos_angular_speed = -world_gui->angular * 0.5;
@@ -292,9 +327,16 @@ protected:
     Stg::ModelRanger *rgr;
     std::vector<double> scan;
     std::vector<float> depth_data;
-    //std::vector<Stg::meters_t> *scan;
+    int camera_width = 0;
+    int camera_height = 0;
+    double wheel_distance = 0.5;
+
+public:
+    DifferentialDriveState robot_state;
 
 };
+
+
 
 struct StageSimulator
 {
@@ -347,12 +389,12 @@ struct StageSimulator
 
 
     DoubleVectorType get_odom(){
-         Stg::Velocity velocity = logic->get_odometry_data();
-         DoubleVectorType odom;
-         odom.push_back(velocity.x);
-         odom.push_back(velocity.y);
-         odom.push_back(velocity.a);
-         return odom;
+        Stg::Velocity velocity = logic->get_odometry_data();
+        DoubleVectorType odom;
+        odom.push_back(velocity.x);
+        odom.push_back(velocity.y);
+        odom.push_back(velocity.a);
+        return odom;
     }
 
     boost::python::object get_scan(){
@@ -368,10 +410,39 @@ struct StageSimulator
         return (stdFloatVecToNumpyArray(depth));
     }
 
+    boost::python::dict get_robot_state( )
+    {
+        boost::python::dict robot_state_dict;
+        robot_state_dict["timestamp_us"] = logic->robot_state.timestamp_us;
+        robot_state_dict["traction_left_distance_mm"] = logic->robot_state.traction_left_distance_mm;
+        robot_state_dict["traction_right_distance_mm"] = logic->robot_state.traction_right_distance_mm;
+        robot_state_dict["heading_angle_rad"] = logic->robot_state.heading_angle_rad;
+        robot_state_dict["angular_velocity_rad_per_sec"] =  logic->robot_state.angular_velocity_rad_per_sec;
+        return robot_state_dict;
+    }
+
+    int get_camera_width(){
+        return logic->get_camera_width();
+    }
+
+    int get_camera_height(){
+        return logic->get_camera_height();
+    }
+
+    DoubleVectorType get_left_and_right_wheels_distances(){
+        DoubleVectorType wheel_velocities;
+        wheel_velocities.push_back(logic->robot_state.traction_left_distance_mm);
+        wheel_velocities.push_back(logic->robot_state.traction_right_distance_mm);
+        return wheel_velocities;
+    }
+
+
     std::string world_file;
     Stg::WorldGui * world;
     Logic * logic;
 };
+
+
 
 
 BOOST_PYTHON_MODULE(stagesim)
@@ -384,11 +455,19 @@ BOOST_PYTHON_MODULE(stagesim)
     class_<DoubleVectorType>("DoubleVectorType")
             .def(vector_indexing_suite<DoubleVectorType>() );
 
+
+    class_<IntVectorType>("IntVectorType")
+            .def(vector_indexing_suite<IntVectorType>() );
+
     class_<StageSimulator>("StageSimulator", init<std::string>())
             .def("run", &StageSimulator::run)
             .def("get_odom", &StageSimulator::get_odom)
             .def("get_scan", &StageSimulator::get_scan)
             .def("get_depth", &StageSimulator::get_depth)
+            .def("get_camera_width", &StageSimulator::get_camera_width)
+            .def("get_camera_height", &StageSimulator::get_camera_height)
+            .def("get_left_and_right_wheels_distances", &StageSimulator::get_left_and_right_wheels_distances)
+            .def("get_robot_state", &StageSimulator::get_robot_state)
             ;
 }
 
