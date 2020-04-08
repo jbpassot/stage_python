@@ -56,7 +56,7 @@ pioneer2dx
   # pioneer2dx's sonars	will be ranger:0 and the laser will be ranger:1
   sicklaser(
     pose [ 0.000 0.000 0.000 0.000 ]
-    update_interval 200
+    update_interval 100
   )
 
   # demonstrate a plugin controller, implemented in examples/ctrl/wander.cc
