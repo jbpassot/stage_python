@@ -34,8 +34,10 @@ public:
     double traction_right_distance_mm;
     double heading_angle_rad;
     double angular_velocity_rad_per_sec;
+    double wheel_distance;
 
-    DifferentialDriveState() : timestamp_us(0), traction_left_distance_mm(0.), traction_right_distance_mm(0.), heading_angle_rad(0.), angular_velocity_rad_per_sec(0.)
+    DifferentialDriveState() : wheel_distance(0.413), timestamp_us(0), traction_left_distance_mm(0.),
+        traction_right_distance_mm(0.), heading_angle_rad(0.), angular_velocity_rad_per_sec(0.)
     {}
 };
 
@@ -163,7 +165,8 @@ public:
     void connect(Stg::World *world)
   {
     // connect the first population_size robots to this controller
-    for (unsigned int idx = 0; idx < population_size; idx++) {
+    //for (unsigned int idx = 0; idx < population_size; idx++) {
+        int idx = 0;
       // the robots' models are named r0 .. r1999
       std::stringstream name;
       name << "r" << idx;
@@ -174,6 +177,7 @@ public:
       assert(posmod != 0);
 
 
+      robot_state.wheel_distance = posmod->wheeldistance;
       robots[idx].position = posmod;
       robots[idx].position->Subscribe();
 
@@ -194,7 +198,7 @@ public:
       assert(rngmod != 0);
       robots[idx].ranger = rngmod;
       robots[idx].ranger->Subscribe();
-    }
+    //}
       Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
 
     world_gui->AddMoveCallback(Logic::MoveCallback, reinterpret_cast<void *>(this));
@@ -212,8 +216,8 @@ public:
       const double interval((double)world->sim_interval / 1e6);
 
       robot_state.timestamp_us = world->SimTimeNow();
-      robot_state.traction_left_distance_mm += wheel_distance* (2*velocity.x + velocity.a) / 2.;
-      robot_state.traction_right_distance_mm += wheel_distance* (2*velocity.x - velocity.a) / 2.;
+      robot_state.traction_left_distance_mm += robot_state.wheel_distance* (2*velocity.x + velocity.a) / 2.;
+      robot_state.traction_right_distance_mm += robot_state.wheel_distance* (2*velocity.x - velocity.a) / 2.;
       robot_state.angular_velocity_rad_per_sec = velocity.a;
       robot_state.heading_angle_rad += velocity.a * interval;
 
@@ -233,16 +237,8 @@ public:
       //world_gui->Redraw();
       //world_gui->NeedRedraw();
 
-      double left_wheel_velocity_meter, right_wheel_velocity_meter, wheel_distance;
-      left_wheel_velocity_meter = 0.3;
-      right_wheel_velocity_meter = 0.;
-      wheel_distance = 0.5;
-
-      double brainos_forward_speed = (left_wheel_velocity_meter + right_wheel_velocity_meter) / 2.;
-      double brainos_angular_speed = (left_wheel_velocity_meter - right_wheel_velocity_meter) / wheel_distance;
-
-      brainos_forward_speed = world_gui->linear * 1.5;
-      brainos_angular_speed = -world_gui->angular * 0.5;
+      double brainos_forward_speed = world_gui->linear * 1.5;
+      double brainos_angular_speed = -world_gui->angular * 0.5;
 
       robots[0].position->SetSpeed(brainos_forward_speed, 0., brainos_angular_speed);
 
@@ -329,7 +325,6 @@ protected:
     std::vector<float> depth_data;
     int camera_width = 0;
     int camera_height = 0;
-    double wheel_distance = 0.5;
 
 public:
     DifferentialDriveState robot_state;
@@ -413,11 +408,13 @@ struct StageSimulator
     boost::python::dict get_robot_state( )
     {
         boost::python::dict robot_state_dict;
+
         robot_state_dict["timestamp_us"] = logic->robot_state.timestamp_us;
         robot_state_dict["traction_left_distance_mm"] = logic->robot_state.traction_left_distance_mm;
         robot_state_dict["traction_right_distance_mm"] = logic->robot_state.traction_right_distance_mm;
         robot_state_dict["heading_angle_rad"] = logic->robot_state.heading_angle_rad;
         robot_state_dict["angular_velocity_rad_per_sec"] =  logic->robot_state.angular_velocity_rad_per_sec;
+        robot_state_dict["wheel_distance"] =  logic->robot_state.wheel_distance;
         return robot_state_dict;
     }
 

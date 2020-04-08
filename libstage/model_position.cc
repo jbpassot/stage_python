@@ -219,6 +219,7 @@ void ModelPosition::Load(void)
 
   // choose a wheelbase
   this->wheelbase = wf->ReadLength(wf_entity, "wheelbase", this->wheelbase);
+  this->wheeldistance= wf->ReadLength(wf_entity, "wheeldistance", this->wheeldistance);
 
   // load odometry if specified
   if (wf->PropertyExists(wf_entity, "odom")) {

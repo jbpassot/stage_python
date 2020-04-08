@@ -2806,6 +2806,7 @@ private:
   Velocity integration_error; ///< errors to apply in simple odometry model
   double wheelbase;
 
+
 public:
   /** Set the min and max acceleration in all 4 DOF */
   Bounds acceleration_bounds[4];
@@ -2818,6 +2819,7 @@ public:
   /// Destructor
   ~ModelPosition();
 
+  double wheeldistance;
   /** Get (a copy of) the model's velocity in its local reference
 frame. */
   Velocity GetVelocity() const { return velocity; }
