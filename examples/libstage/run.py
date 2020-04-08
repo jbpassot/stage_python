@@ -31,10 +31,8 @@ def send_command(sim, key):
         send_motor_command = False
     if send_motor_command:
         #print ('Sending Motor Command')
-        sim.send_command_and_step_simulation(left_wheel_desired_velocity, right_wheel_desired_velocity)
+        sim.send_command(left_wheel_desired_velocity, right_wheel_desired_velocity)
 
-    if key == 'r':
-        sim.release_simulation()
 
 
 if __name__ == "__main__":
@@ -47,6 +45,7 @@ if __name__ == "__main__":
     sim = stagesim.StageSimulator("/home/jb/projects/stage4/Stage/worlds/benchmark/hospital_2.world");
 
     key = 0
+    free_simulation = True
 
     while (True):
         # print (sim.get_info())
@@ -67,5 +66,24 @@ if __name__ == "__main__":
         else:
             imshow_scaled("camera", np.zeros((300, 300)), scaling=1)
 
-        send_command(sim, chr(key%256))
-        key = cv2.waitKey(50)
+        key = chr(key%256)
+
+        if key == 'r':
+            free_simulation = not free_simulation
+            if free_simulation:
+                print "*"*50
+                print "RELEASING THE SIMULATION"
+                sim.release_simulation()
+                print "*"*50
+            else:
+                print "*"*50
+                print "LOCKING THE SIMULATION"
+                print "*"*50
+
+        if not free_simulation:
+            sim.step_simulation(50)
+
+
+        send_command(sim, key)
+
+        key = cv2.waitKey(1)

@@ -291,12 +291,14 @@ public:
       }
       robots[0].position->SetSpeed(brainos_forward_speed, 0., brainos_angular_speed);
 
+
       //Wait for the next step or resume of simulation
       while (number_of_steps == 0){
           usleep(1000);
       }
       if (number_of_steps>0)
           number_of_steps --;
+
   }
 
 protected:
@@ -427,11 +429,21 @@ struct StageSimulator
         return logic->camera_state.camera_height;
     }
 
-    void send_command_and_step_simulation(double traction_left_wheel_speed, double traction_right_wheel_speed) {
+    void send_command(double traction_left_wheel_speed, double traction_right_wheel_speed) {
         logic->drive_command.timestamp_us = world->SimTimeNow();
         logic->drive_command.traction_left_wheel_speed = traction_left_wheel_speed;
         logic->drive_command.traction_right_wheel_speed = traction_right_wheel_speed;
-        logic->number_of_steps = 1;
+    }
+
+    void step_simulation(int number_of_ms) {
+        int sim_interval_ms = world->sim_interval / 1000;
+        int num_steps = number_of_ms /  sim_interval_ms;
+        if (number_of_ms % sim_interval_ms != 0){
+            num_steps ++;
+            PRINT_ERR2("%d ms is not a fraction of sim interval %d", number_of_ms, sim_interval_ms);
+            PRINT_ERR2("Step simulation of %d steps (%d ms)", num_steps, num_steps*sim_interval_ms);
+        }
+        logic->number_of_steps = num_steps;
         //world->UnpauseForNumSteps(1);
     }
 
@@ -470,7 +482,8 @@ BOOST_PYTHON_MODULE(stagesim)
             .def("get_camera_width", &StageSimulator::get_camera_width)
             .def("get_camera_height", &StageSimulator::get_camera_height)
             .def("get_robot_state", &StageSimulator::get_robot_state)
-            .def("send_command_and_step_simulation", &StageSimulator::send_command_and_step_simulation)
+            .def("send_command", &StageSimulator::send_command)
+            .def("step_simulation", &StageSimulator::step_simulation)
             .def("release_simulation", &StageSimulator::release_simulation)
             ;
 }
