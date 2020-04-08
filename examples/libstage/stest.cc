@@ -25,6 +25,16 @@ typedef std::vector<double> DoubleVectorType;
 typedef std::vector<int> IntVectorType;
 
 
+class DifferentialDriveCommand{
+public:
+    Stg::usec_t timestamp_us;
+    double traction_left_wheel_speed;
+    double traction_right_wheel_speed;
+
+    DifferentialDriveCommand(): timestamp_us(0), traction_left_wheel_speed(0.), traction_right_wheel_speed(0.)
+    {}
+};
+
 class DifferentialDriveState
 {
 public:
@@ -171,7 +181,7 @@ public:
 
 
     explicit Logic(unsigned int popsize)
-      : population_size(popsize), robots(new Robot[population_size])
+      : population_size(popsize), robots(new Robot[population_size]), last_timestamp_us_command(0)
   {
   }
 
@@ -226,7 +236,7 @@ public:
 
   ~Logic() { delete[] robots; }
   void Tick(Stg::World * world) {
-
+      PRINT_ERR("In Tick");
       //Step 1. Read status of the robot
       velocity = robots[0].position-> GetVelocity();
 
@@ -266,7 +276,16 @@ public:
       double brainos_forward_speed = world_gui->linear * 1.5;
       double brainos_angular_speed = -world_gui->angular * 0.5;
 
+      if (drive_command.timestamp_us > last_timestamp_us_command){
+          PRINT_ERR("Sending motor command and Unpausing for 1 step of 50ms");
+          last_timestamp_us_command = drive_command.timestamp_us;
+          brainos_forward_speed = (drive_command.traction_left_wheel_speed + drive_command.traction_right_wheel_speed) / 2.;
+          brainos_angular_speed = (drive_command.traction_right_wheel_speed - drive_command.traction_left_wheel_speed) / robot_state.wheel_distance;
+      }
       robots[0].position->SetSpeed(brainos_forward_speed, 0., brainos_angular_speed);
+
+
+      world_gui->Redraw();
 
   }
 
@@ -276,10 +295,12 @@ protected:
 
     Stg::Velocity velocity;
     Stg::ModelRanger *rgr;
+    Stg::usec_t last_timestamp_us_command;
 
 
 public:
     DifferentialDriveState robot_state;
+    DifferentialDriveCommand drive_command;
     LidarState lidar_state;
     CameraState camera_state;
 };
@@ -304,6 +325,8 @@ struct StageSimulator
 
         // create the world
         world = new Stg::WorldGui(800, 700, "Stage Benchmark Program");
+
+        timestamp_us = world->SimTimeNow();
 
         // normal posix pthread C function pointer
         typedef void *(*func_ptr)(void *);
@@ -393,9 +416,17 @@ struct StageSimulator
         return logic->camera_state.camera_height;
     }
 
+    void send_command_and_step_simulation(double traction_left_wheel_speed, double traction_right_wheel_speed) {
+        logic->drive_command.timestamp_us = world->SimTimeNow();
+        logic->drive_command.traction_left_wheel_speed = traction_left_wheel_speed;
+        logic->drive_command.traction_right_wheel_speed = traction_right_wheel_speed;
+        world->UnpauseForNumSteps(1);
+    }
+
     std::string world_file;
     Stg::WorldGui * world;
     Logic * logic;
+    Stg::usec_t timestamp_us;
 };
 
 
@@ -423,6 +454,7 @@ BOOST_PYTHON_MODULE(stagesim)
             .def("get_camera_width", &StageSimulator::get_camera_width)
             .def("get_camera_height", &StageSimulator::get_camera_height)
             .def("get_robot_state", &StageSimulator::get_robot_state)
+            .def("send_command_and_step_simulation", &StageSimulator::send_command_and_step_simulation)
             ;
 }
 
