@@ -284,7 +284,7 @@ void ModelPosition::Load(void)
 
 void ModelPosition::Update(void)
 {
-  PRINT_DEBUG1("[%lu] position update", this->world->SimTimeNow());
+  //PRINT_ERR1("[%lu] position update", this->world->SimTimeNow());
 
   // stop by default
   Velocity vel(0, 0, 0, 0);
@@ -533,7 +533,12 @@ void ModelPosition::Move(void)
   if (disabled)
     return;
 
-  // convert usec to sec
+
+   if (interval != world->sim_interval){
+       PRINT_ERR2("%d == %d", interval, world->sim_interval );
+   }
+
+    // convert usec to sec
   const double interval((double)world->sim_interval / 1e6);
 
   // find the change of pose due to our velocity vector

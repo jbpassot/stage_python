@@ -597,7 +597,7 @@ void Model::Shutdown(void)
 
 void Model::Update(void)
 {
-  // printf( "Q%d model %p %s update\n", event_queue_num, this, Token() );
+  //printf( "Q%d model %p %s update\n", event_queue_num, this, Token() );
 
   last_update = world->sim_time;
 
@@ -610,8 +610,13 @@ void Model::Update(void)
   // they may make OpenGL calls or unsafe Stage API calls,
   // etc. We queue up the callback into a queue specific to
 
-  if (!callbacks[Model::CB_UPDATE].empty())
-    world->pending_update_callbacks[event_queue_num].push(this);
+  if (!callbacks[Model::CB_UPDATE].empty()) {
+      //PRINT_ERR1("%s : More callbacks", Token());
+      world->pending_update_callbacks[event_queue_num].push(this);
+  }
+  //else{
+  //    PRINT_ERR1("%s : Finish callbacks", Token());
+  //}
 }
 
 void Model::CallUpdateCallbacks(void)

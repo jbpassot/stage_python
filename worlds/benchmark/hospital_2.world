@@ -32,7 +32,7 @@ window
   scale 12.611 
 
   show_data 1
-  interval 40
+  interval 50
 )
 
 # load an environment bitmap
@@ -49,11 +49,15 @@ pioneer2dx
   # can refer to the robot by this name
   name "r0"
   pose [ -43.786 -13.635 0.000 179.595 ]
+  update_interval 50.  # Need to be the same as interval_sim ???
 
   wheeldistance 0.7
 
   # pioneer2dx's sonars	will be ranger:0 and the laser will be ranger:1
-  sicklaser( pose [ 0.000 0.000 0.000 0.000 ] )
+  sicklaser(
+    pose [ 0.000 0.000 0.000 0.000 ]
+    update_interval 200
+  )
 
   # demonstrate a plugin controller, implemented in examples/ctrl/wander.cc
   # you probably should comment this out when using simple.cfg with Player
@@ -73,7 +77,7 @@ pioneer2dx
       fov [ 60 45 ]
       pantilt [ 0 0 ]
       alwayson 1
-      update_interval 250
+      update_interval 200
     )
 
 

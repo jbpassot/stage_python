@@ -205,9 +205,15 @@ template <class Scalar_t> Scalar_t generateGaussianNoise(Scalar_t variance)
 
 void ModelRanger::Update(void)
 {
-  // raytrace new range data for all sensors
+    // printf( "Q%d model %p %s update\n", event_queue_num, this, Token() );
+    // raytrace new range data for all sensors
   FOR_EACH (it, sensors)
     it->Update(this);
+
+   if (this->world->SimTimeNow() - last_update < interval){
+       PRINT_ERR("Ranger update: TOO EARLY");
+       return;
+   }
 
   Model::Update();
 }

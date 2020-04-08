@@ -181,7 +181,7 @@ public:
 
 
     explicit Logic(unsigned int popsize)
-      : population_size(popsize), robots(new Robot[population_size]), last_timestamp_us_command(0)
+      : population_size(popsize), robots(new Robot[population_size]), last_timestamp_us_command(0), number_of_steps(-1)
   {
   }
 
@@ -236,9 +236,15 @@ public:
 
   ~Logic() { delete[] robots; }
   void Tick(Stg::World * world) {
-      PRINT_ERR("In Tick");
+      bool debug = false;
+
       //Step 1. Read status of the robot
-      velocity = robots[0].position-> GetVelocity();
+      velocity = robots[0].position->GetVelocity();
+
+      if (debug){
+          PRINT_ERR1("%s", world->ClockString().c_str());
+          PRINT_ERR2("Robot Speed (%f, %f)", velocity.x, velocity.a);
+      }
 
       // Filling scan state
       lidar_state.timestamp_us = robots[0].ranger->last_update;
@@ -277,16 +283,20 @@ public:
       double brainos_angular_speed = -world_gui->angular * 0.5;
 
       if (drive_command.timestamp_us > last_timestamp_us_command){
-          PRINT_ERR("Sending motor command and Unpausing for 1 step of 50ms");
+
           last_timestamp_us_command = drive_command.timestamp_us;
           brainos_forward_speed = (drive_command.traction_left_wheel_speed + drive_command.traction_right_wheel_speed) / 2.;
           brainos_angular_speed = (drive_command.traction_right_wheel_speed - drive_command.traction_left_wheel_speed) / robot_state.wheel_distance;
+          //PRINT_ERR2("Applying motor command (%f, %f)", brainos_forward_speed, brainos_angular_speed);
       }
       robots[0].position->SetSpeed(brainos_forward_speed, 0., brainos_angular_speed);
 
-
-      world_gui->Redraw();
-
+      //Wait for the next step or resume of simulation
+      while (number_of_steps == 0){
+          usleep(1000);
+      }
+      if (number_of_steps>0)
+          number_of_steps --;
   }
 
 protected:
@@ -303,6 +313,7 @@ public:
     DifferentialDriveCommand drive_command;
     LidarState lidar_state;
     CameraState camera_state;
+    int number_of_steps;
 };
 
 
@@ -420,7 +431,12 @@ struct StageSimulator
         logic->drive_command.timestamp_us = world->SimTimeNow();
         logic->drive_command.traction_left_wheel_speed = traction_left_wheel_speed;
         logic->drive_command.traction_right_wheel_speed = traction_right_wheel_speed;
-        world->UnpauseForNumSteps(1);
+        logic->number_of_steps = 1;
+        //world->UnpauseForNumSteps(1);
+    }
+
+    void release_simulation(){
+        logic->number_of_steps = -1;
     }
 
     std::string world_file;
@@ -455,6 +471,7 @@ BOOST_PYTHON_MODULE(stagesim)
             .def("get_camera_height", &StageSimulator::get_camera_height)
             .def("get_robot_state", &StageSimulator::get_robot_state)
             .def("send_command_and_step_simulation", &StageSimulator::send_command_and_step_simulation)
+            .def("release_simulation", &StageSimulator::release_simulation)
             ;
 }
 

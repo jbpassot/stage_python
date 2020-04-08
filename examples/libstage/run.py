@@ -3,10 +3,38 @@ import logging
 import threading
 import time
 import cv2
+import numpy as np
 
 def imshow_scaled(window_name, img, scaling=3):
     '''Convenience function to show cv images on high-res monitors'''
     cv2.imshow(window_name, cv2.resize(img, None, None, scaling, scaling, cv2.INTER_NEAREST))
+
+
+def send_command(sim, key):
+    left_wheel_desired_velocity = 0.
+    right_wheel_desired_velocity = 0.
+    send_motor_command = True
+
+    if key == 'w': # Move Forward for 50 ms:
+        left_wheel_desired_velocity = 0.5
+        right_wheel_desired_velocity = 0.5
+    elif key == 's': # Move Backward for 50 ms:
+        left_wheel_desired_velocity = -0.5
+        right_wheel_desired_velocity = -0.5
+    elif key == 'a': # Move Left for 50 ms:
+        left_wheel_desired_velocity = -0.5
+        right_wheel_desired_velocity = 0.5
+    elif key == 'd': # Move Backward for 50 ms:
+        left_wheel_desired_velocity = 0.5
+        right_wheel_desired_velocity = -0.5
+    else:
+        send_motor_command = False
+    if send_motor_command:
+        #print ('Sending Motor Command')
+        sim.send_command_and_step_simulation(left_wheel_desired_velocity, right_wheel_desired_velocity)
+
+    if key == 'r':
+        sim.release_simulation()
 
 
 if __name__ == "__main__":
@@ -18,6 +46,8 @@ if __name__ == "__main__":
 
     sim = stagesim.StageSimulator("/home/jb/projects/stage4/Stage/worlds/benchmark/hospital_2.world");
 
+    key = 0
+
     while (True):
         # print (sim.get_info())
         odom = sim.get_odom()
@@ -25,7 +55,8 @@ if __name__ == "__main__":
         lidar_data = sim.get_scan_data()
         depth_data = sim.get_depth_data()
 
-        print (robot_state)
+        # print robot state here
+        # print (robot_state)
 
         if depth_data["timestamp_us"] > 0:
             width = depth_data["width"]
@@ -33,4 +64,8 @@ if __name__ == "__main__":
             camera = depth_data["data"].reshape((height,width)) / 8.
             camera = camera[::-1,...]
             imshow_scaled("camera", camera, scaling=1)
-            cv2.waitKey(100)
+        else:
+            imshow_scaled("camera", np.zeros((300, 300)), scaling=1)
+
+        send_command(sim, chr(key%256))
+        key = cv2.waitKey(50)

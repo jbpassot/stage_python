@@ -481,13 +481,14 @@ bool WorldGui::Update()
     Stop();
   }
 
+  /*
   if (this->number_of_steps_to_run>0){
       this->number_of_steps_to_run--;
   }
   if (this->number_of_steps_to_run==0){
       this->number_of_steps_to_run = -1;
       Stop();
-  }
+  }*/
 
     return done;
 }
@@ -567,9 +568,8 @@ void WorldGui::DrawVoxels() const
 
 void WorldGui::UnpauseForNumSteps(int steps)
 {
-    PRINT_ERR1("Unpausing for %d steps", steps);
     this->number_of_steps_to_run = steps;
-    this->Update();
+    //this->Update();
 }
 
 
