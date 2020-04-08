@@ -18,7 +18,6 @@
 #include "stage.hh"
 #include <boost/python.hpp>
 #include <numpy/ndarrayobject.h>
-//#include <numpy/arrayobject.h>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 using namespace boost::python;
 
@@ -41,7 +40,42 @@ public:
     {}
 };
 
-boost::python::object stdVecToNumpyArray( std::vector<double> const& vec )
+class LidarState{
+public:
+    Stg::usec_t timestamp_us;
+    //Stg::Pose pose;
+    //Stg::Bounds range;
+    double fov;
+    //double angle_noise; //< variance for ranger angle
+    //double range_noise; //< variance for range readings
+    //double range_noise_const; //< variance for constant noise (not depending on range)
+    unsigned int sample_count;
+
+    std::vector<double> ranges;
+    std::vector<double> intensities;
+    std::vector<double> bearings;
+
+    LidarState():
+    //pose(0, 0, 0, 0), range(0.0, 5.0),
+    fov(0.1), timestamp_us(0),
+    sample_count(1), ranges(), intensities(), bearings()
+    {}
+};
+
+class CameraState{
+public:
+    Stg::usec_t timestamp_us;
+    std::vector<float> depth_data;
+    std::vector<float> rgb_data;
+    int camera_width = 0;
+    int camera_height = 0;
+
+    CameraState():
+        depth_data(),rgb_data(),camera_width(0),camera_height(0), timestamp_us(0)
+    {}
+};
+
+boost::python::object stdDoubleVecToNumpyArray(std::vector<double> const& vec )
 {
    npy_intp size = vec.size();
 
@@ -115,7 +149,7 @@ public:
 };
 
 class Logic {
-  Logic(): scan(){}
+  Logic() {}
   Logic(const Logic &) {}
 public:
   static int Callback(Stg::World *world, void *userarg)
@@ -145,23 +179,6 @@ public:
     return velocity;
   }
 
-  std::vector<Stg::meters_t> get_lidar_data(){
-    return scan;
-  }
-
-   std::vector<float> get_camera_data(){
-    return depth_data;
-  }
-
-
-    int get_camera_width(){
-      return camera_width;
-    }
-
-    int get_camera_height(){
-      return camera_height;
-    }
-
     void connect(Stg::World *world)
   {
     // connect the first population_size robots to this controller
@@ -188,8 +205,8 @@ public:
 
 
         if (cammod)
-            camera_width = robots[idx].camera->getWidth();
-            camera_height = robots[idx].camera->getHeight();
+            camera_state.camera_width = robots[idx].camera->getWidth();
+            camera_state.camera_height = robots[idx].camera->getHeight();
             robots[idx].camera->Subscribe();
 
                 // get the robot's ranger model and subscribe to it
@@ -212,25 +229,34 @@ public:
 
       //Step 1. Read status of the robot
       velocity = robots[0].position-> GetVelocity();
-      scan = robots[0].ranger->GetSensors()[0].ranges;
-      const double interval((double)world->sim_interval / 1e6);
 
+      // Filling scan state
+      lidar_state.timestamp_us = robots[0].ranger->last_update;
+      lidar_state.ranges = robots[0].ranger->GetSensors()[0].ranges;
+      lidar_state.intensities = robots[0].ranger->GetSensors()[0].intensities;
+      lidar_state.bearings = robots[0].ranger->GetSensors()[0].bearings;
+      lidar_state.fov = robots[0].ranger->GetSensors()[0].fov;
+      lidar_state.sample_count = robots[0].ranger->GetSensors()[0].sample_count;
+
+      // Filling robot state
+      const double interval((double)world->sim_interval / 1e6);
       robot_state.timestamp_us = world->SimTimeNow();
       robot_state.traction_left_distance_mm += robot_state.wheel_distance* (2*velocity.x + velocity.a) / 2.;
       robot_state.traction_right_distance_mm += robot_state.wheel_distance* (2*velocity.x - velocity.a) / 2.;
       robot_state.angular_velocity_rad_per_sec = velocity.a;
       robot_state.heading_angle_rad += velocity.a * interval;
 
-
+      // Filling Camera state
       if (robots[0].camera != NULL) {
           float *depth_data_camera = (float *) robots[0].camera->FrameDepth();
           float *rgb_data_camera = (float *) robots[0].camera->FrameColor();
           int size = robots[0].camera->getWidth() * robots[0].camera->getHeight();
           if (size && depth_data_camera) {
               //depth_data_camera = std::array<float,4> b = a;
-              depth_data.resize(size);
-              std::copy(depth_data_camera, depth_data_camera + size, depth_data.begin());
+              camera_state.depth_data.resize(size);
+              std::copy(depth_data_camera, depth_data_camera + size, camera_state.depth_data.begin());
           }
+          camera_state.timestamp_us = robots[0].camera->last_update;
       }
 
       Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
@@ -242,77 +268,6 @@ public:
 
       robots[0].position->SetSpeed(brainos_forward_speed, 0., brainos_angular_speed);
 
-      /*
-      if (brainos_forward_speed != 0 || brainos_angular_speed != 0) {
-          printf("Run for %d steps\n", 50);
-          world_gui->UnpauseForNumSteps(50);
-      }*/
-
-        /*
-      // the controllers parameters
-    const double vspeed = 0.4; // meters per second
-    const double wgain = 1.0; // turn speed gain
-    const double safe_dist = 0.1; // meters
-    const double safe_angle = 0.3; // radians
-
-    //usleep(10000);
-
-    // each robot has a group of ir sensors
-    // each sensor takes one sample
-    // the forward sensor is the middle sensor
-    for (unsigned int idx = 0; idx < population_size; idx++) {
-      Stg::ModelRanger *rgr = robots[idx].ranger;
-
-      // compute the vector sum of the sonar ranges
-      double dx = 0, dy = 0;
-
-      // the range model has multiple sensors
-      typedef std::vector<Stg::ModelRanger::Sensor>::const_iterator sensor_iterator;
-      const std::vector<Stg::ModelRanger::Sensor> sensors = rgr->GetSensors();
-
-      for (sensor_iterator sensor = sensors.begin(); sensor != sensors.end(); ++sensor) {
-        // each sensor takes a single sample (as specified in the .world)
-        const double srange = (*sensor).ranges[0];
-        const double angle = (*sensor).pose.a;
-
-        dx += srange * std::cos(angle);
-        dy += srange * std::sin(angle);
-      }
-
-      if (dx == 0)
-        continue;
-
-      if (dy == 0)
-        continue;
-
-      // calculate the angle towards the farthest obstacle
-      const double resultant_angle = std::atan2(dy, dx);
-
-      // check whether the front is clear
-      const unsigned int forward_idx = sensors.size() / 2u - 1u;
-
-      const double forwardm_range = sensors[forward_idx - 1].ranges[0];
-      const double forward_range = sensors[forward_idx + 0].ranges[0];
-      const double forwardp_range = sensors[forward_idx + 1].ranges[0];
-
-      bool front_clear =
-          ((forwardm_range > safe_dist / 5.0) && (forward_range > safe_dist)
-           && (forwardp_range > safe_dist / 5.0) && (std::abs(resultant_angle) < safe_angle));
-
-      // turn the sensor input into movement commands
-
-      // move forwards if the front is clear
-      const double forward_speed = front_clear ? vspeed : 0.1;
-      // do not strafe
-      const double side_speed = 0.0;
-
-      // turn towards the farthest obstacle
-      const double turn_speed = wgain * resultant_angle;
-
-      // finally, relay the commands to the robot
-      robots[idx].position->SetSpeed(brainos_forward_speed, side_speed, brainos_angular_speed);
-    }
-    */
   }
 
 protected:
@@ -321,14 +276,12 @@ protected:
 
     Stg::Velocity velocity;
     Stg::ModelRanger *rgr;
-    std::vector<double> scan;
-    std::vector<float> depth_data;
-    int camera_width = 0;
-    int camera_height = 0;
+
 
 public:
     DifferentialDriveState robot_state;
-
+    LidarState lidar_state;
+    CameraState camera_state;
 };
 
 
@@ -336,8 +289,6 @@ public:
 struct StageSimulator
 {
     StageSimulator(std::string world_file): world_file(world_file) {
-
-
 
         // initialize libstage
         int argc = 3;
@@ -392,17 +343,33 @@ struct StageSimulator
         return odom;
     }
 
-    boost::python::object get_scan(){
-        std::vector<double> lidar =  logic->get_lidar_data();
-        if (lidar.size() == 0) lidar.push_back(0.);
-        return (stdVecToNumpyArray(lidar));
+    boost::python::object get_scan_data() {
+        boost::python::dict scan_data_dict;
+        std::vector<double> ranges = logic->lidar_state.ranges;
+        std::vector<double> intensities = logic->lidar_state.intensities;
+        std::vector<double> bearings = logic->lidar_state.bearings;
+        scan_data_dict["ranges"] = NULL;
+        scan_data_dict["intensities"] = NULL;
+        scan_data_dict["bearings"] = NULL;
+        if (ranges.size() > 0) scan_data_dict["ranges"] = stdDoubleVecToNumpyArray(ranges);
+        if (intensities.size() > 0) scan_data_dict["intensities"] = stdDoubleVecToNumpyArray(intensities);
+        if (bearings.size() > 0) scan_data_dict["bearings"] = stdDoubleVecToNumpyArray(bearings);
+        scan_data_dict["fov"] = logic->lidar_state.fov;
+        scan_data_dict["timestamp_us"] = logic->lidar_state.timestamp_us;
+        return scan_data_dict;
     }
 
 
-    boost::python::object get_depth(){
-        std::vector<float> depth =  logic->get_camera_data();
-        if (depth.size() == 0) depth.push_back(0.);
-        return (stdFloatVecToNumpyArray(depth));
+    boost::python::object get_depth_data(){
+        boost::python::dict depth_data_dict;
+        std::vector<float> depth =  logic->camera_state.depth_data;
+        depth_data_dict["timestamp_us"] = logic->camera_state.timestamp_us;
+        depth_data_dict["width"] = logic->camera_state.camera_width;
+        depth_data_dict["height"] = logic->camera_state.camera_height;
+        depth_data_dict["data"] = NULL;
+        if (depth.size() > 0) depth_data_dict["data"] = stdFloatVecToNumpyArray(depth);
+
+        return depth_data_dict;
     }
 
     boost::python::dict get_robot_state( )
@@ -419,20 +386,12 @@ struct StageSimulator
     }
 
     int get_camera_width(){
-        return logic->get_camera_width();
+        return logic->camera_state.camera_width;
     }
 
     int get_camera_height(){
-        return logic->get_camera_height();
+        return logic->camera_state.camera_height;
     }
-
-    DoubleVectorType get_left_and_right_wheels_distances(){
-        DoubleVectorType wheel_velocities;
-        wheel_velocities.push_back(logic->robot_state.traction_left_distance_mm);
-        wheel_velocities.push_back(logic->robot_state.traction_right_distance_mm);
-        return wheel_velocities;
-    }
-
 
     std::string world_file;
     Stg::WorldGui * world;
@@ -459,11 +418,10 @@ BOOST_PYTHON_MODULE(stagesim)
     class_<StageSimulator>("StageSimulator", init<std::string>())
             .def("run", &StageSimulator::run)
             .def("get_odom", &StageSimulator::get_odom)
-            .def("get_scan", &StageSimulator::get_scan)
-            .def("get_depth", &StageSimulator::get_depth)
+            .def("get_scan_data", &StageSimulator::get_scan_data)
+            .def("get_depth_data", &StageSimulator::get_depth_data)
             .def("get_camera_width", &StageSimulator::get_camera_width)
             .def("get_camera_height", &StageSimulator::get_camera_height)
-            .def("get_left_and_right_wheels_distances", &StageSimulator::get_left_and_right_wheels_distances)
             .def("get_robot_state", &StageSimulator::get_robot_state)
             ;
 }

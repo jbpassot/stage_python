@@ -1,0 +1,80 @@
+# hospital.world - large world file example
+# Authors: Richard Vaughan
+# $Id$
+
+include "../map.inc"
+include "../pioneer.inc"
+include "../sick.inc"
+
+
+
+# time to pause (in GUI mode) or quit (in headless mode (-g)) the simulation
+quit_time 3600 # 1 hour of simulated time
+
+paused 1
+
+# spatial resolution of the underlying occupancy grid. Default is 0.02m.
+resolution 0.03
+
+# set the multiple of real time that Stage should try to achieve. Default is 1.
+# set to 0 to go as fast as possible.
+speedup 1
+
+interval_sim 50.
+
+
+# configure the GUI window
+window
+( 
+  size [ 2000 1500 ]
+  center [-2.847 -5.518]
+  rotate [ 0.000 0.000 ]
+  scale 12.611 
+
+  show_data 1
+  interval 40
+)
+
+# load an environment bitmap
+floorplan
+( 
+  size [140.000 60.000 2.500]
+  pose [0.000 0.500 0.000 0.000]
+  bitmap "../bitmaps/hospital.png"
+)
+
+
+pioneer2dx
+(
+  # can refer to the robot by this name
+  name "r0"
+  pose [ -43.786 -13.635 0.000 179.595 ]
+
+  wheeldistance 0.7
+
+  # pioneer2dx's sonars	will be ranger:0 and the laser will be ranger:1
+  sicklaser( pose [ 0.000 0.000 0.000 0.000 ] )
+
+  # demonstrate a plugin controller, implemented in examples/ctrl/wander.cc
+  # you probably should comment this out when using simple.cfg with Player
+  # ctrl "wander"
+
+  # report error-free position in world coordinates
+  localization "gps"
+  localization_origin [ 0 0 0 0 ]
+
+  trail_length 400
+
+   # add a camera to the robot
+    camera(
+      pose [ 0.000 0.000 0.25 0.000 ]
+      range [ 0.1 8.0 ]
+      resolution [ 600 450 ]
+      fov [ 60 45 ]
+      pantilt [ 0 0 ]
+      alwayson 1
+      update_interval 250
+    )
+
+
+)

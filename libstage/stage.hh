@@ -1752,6 +1752,9 @@ creating the quadric for each flag */
     __CB_TYPE_COUNT //!< must be the last entry: counts the number of types
   } callback_type_t;
 
+  usec_t last_update; ///< time of last update in us, TODO JB write a getter
+
+
 protected:
   /** A list of callback functions can be attached to any
 address. When Model::CallCallbacks( void*) is called, the
@@ -1803,7 +1806,6 @@ offset of its local coordinate system wrt that its parent. */
   uint32_t id;
   usec_t interval; ///< time between updates in usec
   usec_t interval_energy; ///< time between updates of powerpack in usec
-  usec_t last_update; ///< time of last update in us
   bool log_state; ///< iff true, model state is logged
   meters_t map_resolution;
   kg_t mass;

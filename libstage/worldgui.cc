@@ -293,8 +293,6 @@ void WorldGui::AddMoveCallback(world_callback_t cb, void *user)
 }
 
 
-
-
 WorldGui::~WorldGui()
 {
   if (mbar)
