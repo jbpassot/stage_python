@@ -284,7 +284,6 @@ int WorldGui::handle(int e)
             }
 
         default:
-            //PRINT_ERR3("%d %d %d", e, FL_KEYDOWN, FL_KEYUP);
             return Fl_Window::handle(e);
     };
 }
@@ -712,8 +711,7 @@ void WorldGui::Redraw()
 
 void WorldGui::Start()
 {
-  //PRINT_ERR("World Start");
-    PRINT_ERR("Starting the simulation");
+    PRINT_DEBUG("Starting the simulation");
     World::Start();
 
   // start the timer that causes regular redraws
@@ -739,7 +737,7 @@ void WorldGui::SetTimeouts()
 
 void WorldGui::Stop()
 {
-    PRINT_ERR("Stopping the simulation");
+  PRINT_DEBUG("Stopping the simulation");
   World::Stop();
 
   Fl::remove_timeout((Fl_Timeout_Handler)Canvas::TimerCallback);

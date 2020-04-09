@@ -16,9 +16,10 @@
 #include <cmath>
 
 #include "stage.hh"
+#include "python_utils.hh"
 #include <boost/python.hpp>
-#include <numpy/ndarrayobject.h>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+
 using namespace boost::python;
 
 typedef std::vector<double> DoubleVectorType;
@@ -85,70 +86,6 @@ public:
     {}
 };
 
-boost::python::object stdDoubleVecToNumpyArray(std::vector<double> const& vec )
-{
-   npy_intp size = vec.size();
-
-    /* const_cast is rather horrible but we need a writable pointer
-       in C++11, vec.data() will do the trick
-       but you will still need to const_cast
-     */
-
-    double * data = size ? const_cast<double *>(&vec[0])
-                         : static_cast<double *>(NULL);
-
-    // create a PyObject * from pointer and data
-
-    npy_intp dims[1];
-    dims[0] = size;
-
-    PyObject * pyObj = PyArray_SimpleNewFromData( 1, dims, NPY_DOUBLE, data );
-
-    boost::python::handle<> handle( pyObj );
-
-    boost::python::numeric::array arr( handle );
-
-    /* The problem of returning arr is twofold: firstly the user can modify
-      the data which will betray the const-correctness
-      Secondly the lifetime of the data is managed by the C++ API and not the
-      lifetime of the numpy array whatsoever. But we have a simple solution..
-     */
-
-    return arr.copy(); // copy the object. numpy owns the copy now.
-}
-
-boost::python::object stdFloatVecToNumpyArray( std::vector<float> const& vec )
-{
-    npy_intp size = vec.size();
-
-    /* const_cast is rather horrible but we need a writable pointer
-       in C++11, vec.data() will do the trick
-       but you will still need to const_cast
-     */
-
-    float * data = size ? const_cast<float *>(&vec[0])
-                         : static_cast<float *>(NULL);
-
-    // create a PyObject * from pointer and data
-
-    npy_intp dims[1];
-    dims[0] = size;
-
-    PyObject * pyObj = PyArray_SimpleNewFromData( 1, dims, NPY_FLOAT, data );
-
-    boost::python::handle<> handle( pyObj );
-
-    boost::python::numeric::array arr( handle );
-
-    /* The problem of returning arr is twofold: firstly the user can modify
-      the data which will betray the const-correctness
-      Secondly the lifetime of the data is managed by the C++ API and not the
-      lifetime of the numpy array whatsoever. But we have a simple solution..
-     */
-
-    return arr.copy(); // copy the object. numpy owns the copy now.
-}
-
 
 
 class Robot {
@@ -180,8 +117,8 @@ public:
     }
 
 
-    explicit Logic(unsigned int popsize)
-      : population_size(popsize), robots(new Robot[population_size]), last_timestamp_us_command(0)
+    explicit Logic(unsigned int popsize, std::string world_file):
+    population_size(popsize), robots(new Robot[population_size]), last_timestamp_us_command(0), world_file(world_file)
   {
   }
 
@@ -189,24 +126,21 @@ public:
     return velocity;
   }
 
-    void connect(Stg::World *world)
-  {
-    // connect the first population_size robots to this controller
-    //for (unsigned int idx = 0; idx < population_size; idx++) {
+  void connect(Stg::World *world){
         int idx = 0;
-      // the robots' models are named r0 .. r1999
-      std::stringstream name;
-      name << "r" << idx;
+        // the robots' models are named r0 .. r1999
+        std::stringstream name;
+        name << "r" << idx;
 
-      // get the robot's model and subscribe to it
-      Stg::ModelPosition *posmod =
+        // get the robot's model and subscribe to it
+        Stg::ModelPosition *posmod =
           reinterpret_cast<Stg::ModelPosition *>(world->GetModel(name.str()));
-      assert(posmod != 0);
+        assert(posmod != 0);
 
 
-      robot_state.wheel_distance = posmod->wheeldistance;
-      robots[idx].position = posmod;
-      robots[idx].position->Subscribe();
+        robot_state.wheel_distance = posmod->wheeldistance;
+        robots[idx].position = posmod;
+        robots[idx].position->Subscribe();
 
         // get the robot's camera model and subscribe to it
         Stg::ModelCamera *cammod =
@@ -219,26 +153,28 @@ public:
             camera_state.camera_height = robots[idx].camera->getHeight();
             robots[idx].camera->Subscribe();
 
-                // get the robot's ranger model and subscribe to it
-      Stg::ModelRanger *rngmod =
-          reinterpret_cast<Stg::ModelRanger *>(robots[idx].position->GetChild("ranger:1"));
-      assert(rngmod != 0);
-      robots[idx].ranger = rngmod;
-      robots[idx].ranger->Subscribe();
-    //}
-      Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
+        // get the robot's ranger model and subscribe to it
+        Stg::ModelRanger *rngmod =
+          reinterpret_cast<Stg::ModelRanger *>(robots[idx].position->GetChild("ranger:0"));
+        assert(rngmod != 0);
+        robots[idx].ranger = rngmod;
+        robots[idx].ranger->Subscribe();
 
-    world_gui->AddMoveCallback(Logic::MoveCallback, reinterpret_cast<void *>(this));
-    // register with the world
-    world->AddUpdateCallback(Logic::Callback, reinterpret_cast<void *>(this));
+        Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
+
+        // register with the world
+        world->AddUpdateCallback(Logic::Callback, reinterpret_cast<void *>(this));
   }
 
 
   ~Logic() { delete[] robots; }
   void Tick(Stg::World * world) {
       bool debug = false;
+      Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
+      double brainos_forward_speed;
+      double brainos_angular_speed;
 
-      //Step 1. Read status of the robot
+      //Read status of the robot
       velocity = robots[0].position->GetVelocity();
 
       if (debug){
@@ -274,10 +210,9 @@ public:
           camera_state.timestamp_us = robots[0].camera->last_update;
       }
 
-      Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
-
-      double brainos_forward_speed = world_gui->linear * 1.5;
-      double brainos_angular_speed = -world_gui->angular * 0.5;
+      // Sending motor command
+      brainos_forward_speed = world_gui->linear * 1.5;
+      brainos_angular_speed = -world_gui->angular * 0.5;
 
       if (drive_command.timestamp_us > last_timestamp_us_command){
           last_timestamp_us_command = drive_command.timestamp_us;
@@ -285,7 +220,6 @@ public:
           brainos_angular_speed = (drive_command.traction_right_wheel_speed - drive_command.traction_left_wheel_speed) / robot_state.wheel_distance;
       }
       robots[0].position->SetSpeed(brainos_forward_speed, 0., brainos_angular_speed);
-      //world_gui->Redraw();
   }
 
 protected:
@@ -302,6 +236,7 @@ public:
     DifferentialDriveCommand drive_command;
     LidarState lidar_state;
     CameraState camera_state;
+    std::string world_file;
 };
 
 
@@ -311,46 +246,40 @@ struct StageSimulator
     StageSimulator(std::string world_file): world_file(world_file) {
 
         // initialize libstage
-        int argc = 3;
-        char* argv[3];
-        argv[0] = "stage";
-        argv[1] = (char *) world_file.c_str();
-        argv[2] = "1";
+        int number_of_arguments = 3;
+        char* parameters[3];
+        parameters[0] = "stage";
+        parameters[1] = (char *) world_file.c_str();
+        parameters[2] = "1";
+        char ** cast_parameters = parameters;
         int popsize = 1;
-        char ** a = argv;
         pthread_t cThread;
-
-        Stg::Init(&argc, &a);
+        Stg::Init(&number_of_arguments, (char***)&cast_parameters);
 
         // create the world
         world = new Stg::WorldGui(800, 700, "Stage Benchmark Program");
-
         timestamp_us = world->SimTimeNow();
 
         // normal posix pthread C function pointer
         typedef void *(*func_ptr)(void *);
 
-        logic = new Logic(1);
+        logic = new Logic(1, world_file);
 
         std::pair<Stg::WorldGui *, Logic * > * params = new std::pair<Stg::WorldGui *, Logic * >(world, logic);
         pthread_create(&cThread, NULL,  (func_ptr)StageSimulator::run, params);
         //sleep(1);
 
     } // added constructor
-    //static void run(void * world_param){
-        //Stg::WorldGui * world = reinterpret_cast<Stg::WorldGui *>(world_param);
-       //static void run(Stg::WorldGui * world){
-       static void run(std::pair<Stg::WorldGui *, Logic * > * params){
+
+    static void run(std::pair<Stg::WorldGui *, Logic * > * params){
 
         Stg::WorldGui * world = params->first;
         Logic * logic = params->second;
 
         // create the world
-        //world = new Stg::WorldGui(800, 700, "Stage Benchmark Program");
-        world->Load("/home/jb/projects/stage4/Stage/worlds/benchmark/hospital_2.world");
+        world->Load(logic->world_file.c_str());
 
         // create the logic and connect it to the world
-        //logic = new Logic(1);
         logic->connect(world);
         world->Run();
     }
@@ -496,12 +425,12 @@ int main(int argc, char *argv[])
   Stg::Init(&argc, &argv);
 
   // create the world
-  // Stg::World world;
   Stg::WorldGui world(800, 700, "Stage Benchmark Program");
-  world.Load(argv[1]);
+  std::string world_file(argv[1]);
+  world.Load(world_file.c_str());
 
   // create the logic and connect it to the world
-  Logic logic(popsize);
+  Logic logic(popsize, world_file);
   logic.connect(&world);
 
   // and then run the simulation

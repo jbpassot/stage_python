@@ -45,7 +45,7 @@ if __name__ == "__main__":
     logging.basicConfig(format=format, level=logging.INFO,
                         datefmt="%H:%M:%S")
 
-    sim = stagesim.StageSimulator("/home/jb/projects/stage4/Stage/worlds/benchmark/hospital_2.world");
+    sim = stagesim.StageSimulator("/home/jb/projects/stage4/Stage/worlds/hospital.world");
 
     key = 0
     lock_simulation = False

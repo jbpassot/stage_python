@@ -552,7 +552,7 @@ int Canvas::handle(int event)
       }
       break;
     default:
-      redraw(); // we probably set a display config - so need this
+      //redraw(); // we probably set a display config - so need this
       return 0; // keypress unhandled
     }
 
