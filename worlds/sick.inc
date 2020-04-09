@@ -3,10 +3,10 @@ define sicksensor sensor
 (				
   # factory settings for LMS200	
   range [ 0.0 10.0 ]
-  pose [ 0 0 0.1 0 ]
+  pose [ 0 0 0 0 ]
   fov 270
   samples 270
-  color_rgba [0 0 1 0.15]
+  color_rgba [1 0 0 0.15]
 )
 
 define sickcommon ranger

@@ -24,7 +24,7 @@ define whiz_base position
     acceleration_bounds [-0.5 0.5 0 0 0 0 -90 90.0 ]
 
     # actual size
-    size [0.4 0.44 0.4] # sizes from MobileRobots' web site
+    size [0.4 0.44 0.1] # sizes from MobileRobots' web site
 
     # the Whiz center of rotation is offset from its center of area ??
     origin [-0.04 0 0 0]
@@ -40,16 +40,36 @@ define whiz whiz_base
   # simplified Body shape:
   block( 
     points 8
-    point[0] [-0.2 0.12]
-    point[1] [-0.2 -0.12]
-    point[2] [-0.12 -0.2555 ]
+    point[0] [-0.245 0.15648151]
+    point[1] [-0.245 -0.15648151]
+    point[2] [-0.12 -0.22456596 ]
 
-    point[3] [0.12 -0.2555]
-    point[4] [0.2 -0.12]
-    point[5] [0.2 0.12]
-    point[6] [0.12 0.2555]
-    point[7] [-0.12 0.2555]
-    z [0 0.4]
+    point[3] [0.12 -0.22456596]
+    point[4] [0.245 -0.15648151]
+    point[5] [0.245 0.15648151]
+    point[6] [0.12 0.22456596]
+    point[7] [-0.12 0.22456596]
+    z [0 1.]
   )
-)
 
+
+  wheeldistance 0.413
+
+  # whiz sick will be ranger:0
+  sicklaser(
+    pose [ 0.16546 0. 0.22589 0.000 ]
+    update_interval 100
+  )
+
+   # add a camera to the robot
+    camera(
+      pose [ 0.1 -0.1 0.45 0.000 ]
+      range [ 0.1 8.0 ]
+      resolution [ 600 450 ]
+      fov [ 60 90 ]
+      pantilt [ 0 0.55 ]
+      alwayson 1
+      update_interval 200
+    )
+
+)

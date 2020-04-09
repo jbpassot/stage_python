@@ -51,13 +51,6 @@ whiz
   pose [ -43.786 -13.635 0.000 179.595 ]
   update_interval 50.  # Need to be the same as interval_sim
 
-  wheeldistance 0.7
-
-  # whiz sick will be ranger:0
-  sicklaser(
-    pose [ 0.000 0.000 0.000 0.000 ]
-    update_interval 100
-  )
 
   # demonstrate a plugin controller, implemented in examples/ctrl/wander.cc
   # you probably should comment this out when using simple.cfg with Player
@@ -69,6 +62,14 @@ whiz
 
   trail_length 400
 
+
+  wheeldistance 0.7
+
+  # whiz sick will be ranger:0
+  sicklaser(
+    pose [ 0.000 0.000 0.000 0.000 ]
+    update_interval 100
+  )
    # add a camera to the robot
     camera(
       pose [ 0.000 0.000 0.250 0.000 ]
