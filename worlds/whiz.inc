@@ -32,6 +32,8 @@ define whiz_base position
     # estimated mass in KG
     mass 23.0
 
+
+
 )
 
 
@@ -51,5 +53,24 @@ define whiz whiz_base
     point[7] [-0.12 0.2555]
     z [0 0.4]
   )
+
+  wheeldistance 0.413
+
+  # whiz sick will be ranger:0
+  sicklaser(
+    pose [ 0.000 0.000 0.000 0.000 ]
+    update_interval 100
+  )
+   # add a camera to the robot
+    camera(
+      pose [ 0.000 0.000 0.250 0.000 ]
+      range [ 0.1 8.0 ]
+      resolution [ 600 450 ]
+      fov [ 60 45 ]
+      pantilt [ 0 0 ]
+      alwayson 1
+      update_interval 200
+    )
+
 )
 
