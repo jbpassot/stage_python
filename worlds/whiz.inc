@@ -23,14 +23,7 @@ define whiz_base position
     velocity_bounds [-0.5 0.5 0 0 0 0 -90.0 90.0 ]
     acceleration_bounds [-0.5 0.5 0 0 0 0 -90 90.0 ]
 
-    # actual size
-    size [0.4 0.44 0.4] # sizes from MobileRobots' web site
 
-    # the Whiz center of rotation is offset from its center of area ??
-    origin [-0.04 0 0 0]
-
-    # estimated mass in KG
-    mass 23.0
 
 
 
@@ -39,8 +32,35 @@ define whiz_base position
 
 define whiz whiz_base
 (  
-  # simplified Body shape:
-  block( 
+
+ # actual size
+    size [0.4 0.44 0.5] # sizes
+
+    # the Whiz center of rotation is offset from its center of area ??
+    origin [-0.04 0 0 0]
+
+    # estimated mass in KG
+    mass 23.0
+
+  wheeldistance 0.413
+
+  # whiz sick will be ranger:0
+  sicklaser(
+    pose [ 0.05 0. -0.3 0.000 ]
+    update_interval 100
+  )
+   # add a camera to the robot
+    camera(
+      pose [ 0 0 0.1 0.000 ]
+      range [ 0.1 8.0 ]
+      resolution [ 600 450 ]
+      fov [ 60 45 ]
+      pantilt [ 0 0 ]
+      alwayson 1
+      update_interval 200
+    )
+ # simplified Body shape:
+  block(
     points 8
     point[0] [-0.2 0.12]
     point[1] [-0.2 -0.12]
@@ -51,26 +71,7 @@ define whiz whiz_base
     point[5] [0.2 0.12]
     point[6] [0.12 0.2555]
     point[7] [-0.12 0.2555]
-    z [0 0.4]
+    z [0 0.1]
   )
-
-  wheeldistance 0.413
-
-  # whiz sick will be ranger:0
-  sicklaser(
-    pose [ 0.000 0.000 0.000 0.000 ]
-    update_interval 100
-  )
-   # add a camera to the robot
-    camera(
-      pose [ 0.000 0.000 0.250 0.000 ]
-      range [ 0.1 8.0 ]
-      resolution [ 600 450 ]
-      fov [ 60 45 ]
-      pantilt [ 0 0 ]
-      alwayson 1
-      update_interval 200
-    )
-
 )
 

@@ -54,7 +54,7 @@ if __name__ == "__main__":
                         datefmt="%H:%M:%S")
     key = 0
     lock_simulation = False
-    run_async = False
+    run_async = True
 
     sim = stagesim.StageSimulator("/home/jb/projects/stage4/Stage/worlds/hospital.world");
     """
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         if lock_simulation and run_async:
             send_command(sim, key)
             sim.step_simulation_async(50)  # Triggers the simulation to move forward by x ms, asynchronous
-            key = cv2.waitKey(10)
+            key = cv2.waitKey(1)
         elif lock_simulation:  #  Implied: and not run_async:
             send_command(sim, key)
             sim.step_simulation_sync(50)  # Triggers the simulation to move forward by x ms, SYNCHRONOUSLY
