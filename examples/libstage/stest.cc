@@ -181,7 +181,7 @@ public:
 
 
     explicit Logic(unsigned int popsize)
-      : population_size(popsize), robots(new Robot[population_size]), last_timestamp_us_command(0), number_of_steps(-1)
+      : population_size(popsize), robots(new Robot[population_size]), last_timestamp_us_command(0)
   {
   }
 
@@ -293,12 +293,16 @@ public:
 
 
       //Wait for the next step or resume of simulation
-      while (number_of_steps == 0){
-          usleep(1000);
+      /*
+      bool hacky_solution = false;
+      if (hacky_solution){
+          while (number_of_steps == 0){
+              usleep(1000);
+          }
+          if (number_of_steps>0)
+              number_of_steps --;
       }
-      if (number_of_steps>0)
-          number_of_steps --;
-
+       */
   }
 
 protected:
@@ -315,7 +319,7 @@ public:
     DifferentialDriveCommand drive_command;
     LidarState lidar_state;
     CameraState camera_state;
-    int number_of_steps;
+    //int number_of_steps;
 };
 
 
@@ -435,7 +439,10 @@ struct StageSimulator
         logic->drive_command.traction_right_wheel_speed = traction_right_wheel_speed;
     }
 
-    void step_simulation(int number_of_ms) {
+    bool step_simulation(int number_of_ms) {
+
+        if (world->has_more_step_to_run()) return false;
+
         int sim_interval_ms = world->sim_interval / 1000;
         int num_steps = number_of_ms /  sim_interval_ms;
         if (number_of_ms % sim_interval_ms != 0){
@@ -443,12 +450,17 @@ struct StageSimulator
             PRINT_ERR2("%d ms is not a fraction of sim interval %d", number_of_ms, sim_interval_ms);
             PRINT_ERR2("Step simulation of %d steps (%d ms)", num_steps, num_steps*sim_interval_ms);
         }
-        logic->number_of_steps = num_steps;
-        //world->UnpauseForNumSteps(1);
+        //logic->number_of_steps = num_steps;
+        world->UnpauseForNumSteps(num_steps);
+        return true;
     }
 
     void release_simulation(){
-        logic->number_of_steps = -1;
+        world->Unlock();
+    }
+
+    void lock_simulation(){
+        world->Lock();
     }
 
     std::string world_file;
@@ -485,6 +497,7 @@ BOOST_PYTHON_MODULE(stagesim)
             .def("send_command", &StageSimulator::send_command)
             .def("step_simulation", &StageSimulator::step_simulation)
             .def("release_simulation", &StageSimulator::release_simulation)
+            .def("lock_simulation", &StageSimulator::lock_simulation)
             ;
 }
 

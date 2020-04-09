@@ -9,12 +9,13 @@ def imshow_scaled(window_name, img, scaling=3):
     '''Convenience function to show cv images on high-res monitors'''
     cv2.imshow(window_name, cv2.resize(img, None, None, scaling, scaling, cv2.INTER_NEAREST))
 
+global left_wheel_desired_velocity
+global right_wheel_desired_velocity
+
 
 def send_command(sim, key):
-    left_wheel_desired_velocity = 0.
-    right_wheel_desired_velocity = 0.
-    send_motor_command = True
-
+    global left_wheel_desired_velocity
+    global right_wheel_desired_velocity
     if key == 'w': # Move Forward for 50 ms:
         left_wheel_desired_velocity = 0.5
         right_wheel_desired_velocity = 0.5
@@ -28,10 +29,12 @@ def send_command(sim, key):
         left_wheel_desired_velocity = 0.5
         right_wheel_desired_velocity = -0.5
     else:
-        send_motor_command = False
-    if send_motor_command:
-        #print ('Sending Motor Command')
-        sim.send_command(left_wheel_desired_velocity, right_wheel_desired_velocity)
+        left_wheel_desired_velocity *= 0.9
+        right_wheel_desired_velocity *= 0.9
+        if left_wheel_desired_velocity < 0.2: left_wheel_desired_velocity=0.
+        if right_wheel_desired_velocity < 0.2: right_wheel_desired_velocity=0.
+
+    sim.send_command(left_wheel_desired_velocity, right_wheel_desired_velocity)
 
 
 
@@ -46,6 +49,9 @@ if __name__ == "__main__":
 
     key = 0
     free_simulation = True
+
+    left_wheel_desired_velocity = 0.
+    right_wheel_desired_velocity = 0.
 
     while (True):
         # print (sim.get_info())
@@ -71,19 +77,14 @@ if __name__ == "__main__":
         if key == 'r':
             free_simulation = not free_simulation
             if free_simulation:
-                print "*"*50
-                print "RELEASING THE SIMULATION"
+                print ("Unlocking Simulation Environment (Stepping is controlled within the simulator")
                 sim.release_simulation()
-                print "*"*50
             else:
-                print "*"*50
-                print "LOCKING THE SIMULATION"
-                print "*"*50
+                print ("Locking Simulation Environment (Stepping must be controlled by calling step_simulation)")
+                sim.lock_simulation()
 
         if not free_simulation:
             sim.step_simulation(50)
-
-
-        send_command(sim, key)
+            send_command(sim, key)
 
         key = cv2.waitKey(1)

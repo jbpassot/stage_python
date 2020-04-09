@@ -449,6 +449,7 @@ bool WorldGui::Save(const char *filename)
 
 static void UpdateCallback(WorldGui *world)
 {
+  if (world->paused) return ;
   world->Update();
 }
 
@@ -481,14 +482,13 @@ bool WorldGui::Update()
     Stop();
   }
 
-  /*
-  if (this->number_of_steps_to_run>0){
+  if (this->number_of_steps_to_run>=0){
       this->number_of_steps_to_run--;
+      if (this->number_of_steps_to_run == 0){
+          this->paused = true;
+          this->number_of_steps_to_run = -1;
+      }
   }
-  if (this->number_of_steps_to_run==0){
-      this->number_of_steps_to_run = -1;
-      Stop();
-  }*/
 
     return done;
 }
@@ -568,8 +568,29 @@ void WorldGui::DrawVoxels() const
 
 void WorldGui::UnpauseForNumSteps(int steps)
 {
+    //PRINT_ERR1("Unpausing for %d steps!", steps);
     this->number_of_steps_to_run = steps;
-    //this->Update();
+    this->paused = false;
+
+    // start the timer that causes regular redraws
+    //Fl::add_timeout(((double)canvas->interval / 1000), (Fl_Timeout_Handler)Canvas::TimerCallback, canvas);
+    //Fl::remove_idle((Fl_Timeout_Handler)UpdateCallback, this);
+    //Fl::remove_timeout((Fl_Timeout_Handler)UpdateCallback, this);
+    //Fl::add_idle((Fl_Timeout_Handler)UpdateCallback, this);
+
+    //this->Update(); // Triger an update right away
+    //this->Redraw(); // Force a redraw
+}
+
+void WorldGui::Unlock() {
+    this->number_of_steps_to_run = -1;
+    this->Stop();
+}
+
+void WorldGui::Lock() {
+    this->number_of_steps_to_run = 0;
+    this->Start();
+    this->paused = true;
 }
 
 
@@ -698,7 +719,9 @@ void WorldGui::Redraw()
 
 void WorldGui::Start()
 {
-  World::Start();
+  //PRINT_ERR("World Start");
+    PRINT_ERR("Starting the simulation");
+    World::Start();
 
   // start the timer that causes regular redraws
   Fl::add_timeout(((double)canvas->interval / 1000), (Fl_Timeout_Handler)Canvas::TimerCallback,
@@ -723,6 +746,7 @@ void WorldGui::SetTimeouts()
 
 void WorldGui::Stop()
 {
+    PRINT_ERR("Stopping the simulation");
   World::Stop();
 
   Fl::remove_timeout((Fl_Timeout_Handler)Canvas::TimerCallback);

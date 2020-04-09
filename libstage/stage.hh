@@ -1514,7 +1514,10 @@ public:
   virtual void Start();
   virtual void Stop();
 
+  bool has_more_step_to_run(){return number_of_steps_to_run>0;}
   void UnpauseForNumSteps(int steps);
+  void Unlock();
+  void Lock();
 
   usec_t RealTimeNow(void) const;
 
