@@ -17,7 +17,7 @@ resolution 0.03
 
 # set the multiple of real time that Stage should try to achieve. Default is 1.
 # set to 0 to go as fast as possible.
-speedup 0
+speedup 1
 
 interval_sim 50.
 
