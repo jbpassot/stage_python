@@ -282,7 +282,9 @@ int WorldGui::handle(int e)
             }else{
                 return Fl_Window::handle(e);
             }
+
         default:
+            //PRINT_ERR3("%d %d %d", e, FL_KEYDOWN, FL_KEYUP);
             return Fl_Window::handle(e);
     };
 }
@@ -568,23 +570,14 @@ void WorldGui::DrawVoxels() const
 
 void WorldGui::UnpauseForNumSteps(int steps)
 {
-    //PRINT_ERR1("Unpausing for %d steps!", steps);
     this->number_of_steps_to_run = steps;
     this->paused = false;
-
-    // start the timer that causes regular redraws
-    //Fl::add_timeout(((double)canvas->interval / 1000), (Fl_Timeout_Handler)Canvas::TimerCallback, canvas);
-    //Fl::remove_idle((Fl_Timeout_Handler)UpdateCallback, this);
-    //Fl::remove_timeout((Fl_Timeout_Handler)UpdateCallback, this);
-    //Fl::add_idle((Fl_Timeout_Handler)UpdateCallback, this);
-
-    //this->Update(); // Triger an update right away
-    //this->Redraw(); // Force a redraw
 }
 
 void WorldGui::Unlock() {
     this->number_of_steps_to_run = -1;
     this->Stop();
+    this->paused = true;
 }
 
 void WorldGui::Lock() {

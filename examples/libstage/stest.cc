@@ -268,7 +268,6 @@ public:
           float *rgb_data_camera = (float *) robots[0].camera->FrameColor();
           int size = robots[0].camera->getWidth() * robots[0].camera->getHeight();
           if (size && depth_data_camera) {
-              //depth_data_camera = std::array<float,4> b = a;
               camera_state.depth_data.resize(size);
               std::copy(depth_data_camera, depth_data_camera + size, camera_state.depth_data.begin());
           }
@@ -276,33 +275,17 @@ public:
       }
 
       Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
-      //world_gui->Redraw();
-      //world_gui->NeedRedraw();
 
       double brainos_forward_speed = world_gui->linear * 1.5;
       double brainos_angular_speed = -world_gui->angular * 0.5;
 
       if (drive_command.timestamp_us > last_timestamp_us_command){
-
           last_timestamp_us_command = drive_command.timestamp_us;
           brainos_forward_speed = (drive_command.traction_left_wheel_speed + drive_command.traction_right_wheel_speed) / 2.;
           brainos_angular_speed = (drive_command.traction_right_wheel_speed - drive_command.traction_left_wheel_speed) / robot_state.wheel_distance;
-          //PRINT_ERR2("Applying motor command (%f, %f)", brainos_forward_speed, brainos_angular_speed);
       }
       robots[0].position->SetSpeed(brainos_forward_speed, 0., brainos_angular_speed);
-
-
-      //Wait for the next step or resume of simulation
-      /*
-      bool hacky_solution = false;
-      if (hacky_solution){
-          while (number_of_steps == 0){
-              usleep(1000);
-          }
-          if (number_of_steps>0)
-              number_of_steps --;
-      }
-       */
+      //world_gui->Redraw();
   }
 
 protected:
@@ -319,7 +302,6 @@ public:
     DifferentialDriveCommand drive_command;
     LidarState lidar_state;
     CameraState camera_state;
-    //int number_of_steps;
 };
 
 
@@ -450,7 +432,6 @@ struct StageSimulator
             PRINT_ERR2("%d ms is not a fraction of sim interval %d", number_of_ms, sim_interval_ms);
             PRINT_ERR2("Step simulation of %d steps (%d ms)", num_steps, num_steps*sim_interval_ms);
         }
-        //logic->number_of_steps = num_steps;
         world->UnpauseForNumSteps(num_steps);
         return true;
     }

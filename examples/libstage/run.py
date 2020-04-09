@@ -48,7 +48,7 @@ if __name__ == "__main__":
     sim = stagesim.StageSimulator("/home/jb/projects/stage4/Stage/worlds/benchmark/hospital_2.world");
 
     key = 0
-    free_simulation = True
+    lock_simulation = False
 
     left_wheel_desired_velocity = 0.
     right_wheel_desired_velocity = 0.
@@ -75,15 +75,15 @@ if __name__ == "__main__":
         key = chr(key%256)
 
         if key == 'r':
-            free_simulation = not free_simulation
-            if free_simulation:
-                print ("Unlocking Simulation Environment (Stepping is controlled within the simulator")
-                sim.release_simulation()
-            else:
+            lock_simulation = not lock_simulation
+            if lock_simulation:
                 print ("Locking Simulation Environment (Stepping must be controlled by calling step_simulation)")
                 sim.lock_simulation()
+            else:
+                print ("Unlocking Simulation Environment (Stepping is controlled within the simulator")
+                sim.release_simulation()
 
-        if not free_simulation:
+        if lock_simulation:
             sim.step_simulation(50)
             send_command(sim, key)
 

@@ -18,7 +18,7 @@ resolution 0.03
 
 # set the multiple of real time that Stage should try to achieve. Default is 1.
 # set to 0 to go as fast as possible.
-speedup 1
+speedup 0
 
 interval_sim 50.
 
@@ -26,13 +26,14 @@ interval_sim 50.
 # configure the GUI window
 window
 ( 
-  size [ 2000 1500 ]
-  center [-2.847 -5.518]
+  #size [ 2000 1500 ]
+  size [ 800 600 ]
+  center [-43.786 -13.635]
   rotate [ 0.000 0.000 ]
-  scale 12.611 
+  scale 22.341 
 
   show_data 1
-  interval 50
+  interval 40
 )
 
 # load an environment bitmap
@@ -71,7 +72,7 @@ pioneer2dx
 
    # add a camera to the robot
     camera(
-      pose [ 0.000 0.000 0.25 0.000 ]
+      pose [ 0.000 0.000 0.250 0.000 ]
       range [ 0.1 8.0 ]
       resolution [ 600 450 ]
       fov [ 60 45 ]
