@@ -350,7 +350,7 @@ struct StageSimulator
         logic->drive_command.traction_right_wheel_speed = traction_right_wheel_speed;
     }
 
-    bool step_simulation(int number_of_ms) {
+    bool step_simulation_async(int number_of_ms) {
 
         if (world->has_more_step_to_run()) return false;
 
@@ -363,6 +363,25 @@ struct StageSimulator
         }
         world->UnpauseForNumSteps(num_steps);
         return true;
+    }
+
+    bool step_simulation_sync(int number_of_ms) {
+
+        while (world->has_more_step_to_run()){usleep(1000);}
+
+        int sim_interval_ms = world->sim_interval / 1000;
+        int num_steps = number_of_ms /  sim_interval_ms;
+        if (number_of_ms % sim_interval_ms != 0){
+            num_steps ++;
+            PRINT_ERR2("%d ms is not a fraction of sim interval %d", number_of_ms, sim_interval_ms);
+            PRINT_ERR2("Step simulation of %d steps (%d ms)", num_steps, num_steps*sim_interval_ms);
+        }
+        world->UnpauseForNumSteps(num_steps);
+        return true;
+    }
+
+    bool has_simulation_stepped() {
+        return not world->has_more_step_to_run();
     }
 
     void release_simulation(){
@@ -405,7 +424,9 @@ BOOST_PYTHON_MODULE(stagesim)
             .def("get_camera_height", &StageSimulator::get_camera_height)
             .def("get_robot_state", &StageSimulator::get_robot_state)
             .def("send_command", &StageSimulator::send_command)
-            .def("step_simulation", &StageSimulator::step_simulation)
+            .def("step_simulation_async", &StageSimulator::step_simulation_async)
+            .def("step_simulation_sync", &StageSimulator::step_simulation_sync)
+            .def("has_simulation_stepped", &StageSimulator::has_simulation_stepped)
             .def("release_simulation", &StageSimulator::release_simulation)
             .def("lock_simulation", &StageSimulator::lock_simulation)
             ;

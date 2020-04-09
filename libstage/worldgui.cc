@@ -450,6 +450,7 @@ bool WorldGui::Save(const char *filename)
 
 static void UpdateCallback(WorldGui *world)
 {
+  //TODO Should we sleep for a ms before we return ?
   if (world->paused) return ;
   world->Update();
 }

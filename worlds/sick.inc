@@ -11,8 +11,8 @@ define sicksensor sensor
 
 define sickcommon ranger
 (
-  color "blue"
-  size [ 0.156 0.155 0.19 ] # dimensions from LMS200 data sheet	
+  color "grey"
+  size [ 0.156 0.155 0.19 ] # dimensions from LMS200 data sheet
  )
 
 define sickbase sickcommon
@@ -30,7 +30,7 @@ block( points 4
 define fancysickbase sickcommon
 (
   # bottom
-  block( 
+  block(
     points 4
     point[0] [ -0.02 -0.077 ]
     point[1] [  0.078 -0.077 ]
@@ -55,7 +55,7 @@ define fancysickbase sickcommon
     point[1] [  0.078 -0.077 ]
     point[2] [  0.078  0.077 ]
     point[3] [ -0.02  0.077 ]
-    z [0.12 0.21 ]  
+    z [0.12 0.21 ]
   )
 
   # laser bit
@@ -64,7 +64,7 @@ define fancysickbase sickcommon
      point[1] [  0.06 -0.05 ]
      point[2] [  0.06  0.05 ]
      point[3] [ -0.02  0.05 ]
-     z [0.02 0.12 ]  
+     z [0.02 0.12 ]
   )
 )
 
