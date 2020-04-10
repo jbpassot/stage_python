@@ -1,7 +1,5 @@
 import stagesim
 import logging
-import threading
-import time
 import cv2
 import numpy as np
 
@@ -55,6 +53,7 @@ if __name__ == "__main__":
     key = 0
     lock_simulation = False
     run_async = True
+    send_motor_command = False
 
     sim = stagesim.StageSimulator("/home/jb/projects/stage4/Stage/worlds/hospital.world");
     """
@@ -62,7 +61,6 @@ if __name__ == "__main__":
     dir_path = os.path.dirname(os.path.realpath(__file__))
     sim = stagesim.StageSimulator(os.path.join(dir_path, 'worlds', world));
     """
-
 
     left_wheel_desired_velocity = 0.
     right_wheel_desired_velocity = 0.
@@ -88,17 +86,38 @@ if __name__ == "__main__":
 
         key = chr(key%256)
 
-        if key == 'r':
+
+        """
+        Switching from different options
+        """
+        if key == '1': # Locking the simulation, i.e. stepping is controlled within this script
             lock_simulation = not lock_simulation
             toggle_lock_simulation(lock_simulation, sim)
+        if key == '2':
+            # Sync or Async, only valid when locking the simulation
+            # If Async, step_simulation will return without waiting for the simulation to finish stepping
+            # but will pause automatically after stepping
+            if not lock_simulation:
+                lock_simulation = not lock_simulation
+                toggle_lock_simulation(lock_simulation, sim)
+            run_async = not run_async
+            if (run_async): print("Running Async")
+            else: print("Running Sync")
+        if key == '3':
+            # Control sending motor comamand from the script itself
+            # If True, we can send motor command from the OpenCV window (WSAD keys)
+            send_motor_command = not send_motor_command
+            if send_motor_command: print("Sending Motor Command From OpenCV Window: ENABLED")
+            else: print("Sending Motor Command From OpenCV Window: DISABLED")
+
 
         if lock_simulation and run_async:
-            send_command(sim, key)
+            if send_motor_command: send_command(sim, key)
             sim.step_simulation_async(50)  # Triggers the simulation to move forward by x ms, asynchronous
             key = cv2.waitKey(1)
-        elif lock_simulation:  #  Implied: and not run_async:
-            send_command(sim, key)
-            sim.step_simulation_sync(50)  # Triggers the simulation to move forward by x ms, SYNCHRONOUSLY
+        elif lock_simulation and not run_async:
+            if send_motor_command: send_command(sim, key)
+            sim.step_simulation_sync(50, True)  # Triggers the simulation to move forward by x ms, SYNCHRONOUSLY
             key = cv2.waitKey(1)
         else:
             key = cv2.waitKey(1)

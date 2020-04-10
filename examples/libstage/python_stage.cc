@@ -365,9 +365,9 @@ struct StageSimulator
         return true;
     }
 
-    bool step_simulation_sync(int number_of_ms) {
+    bool step_simulation_sync(int number_of_ms, bool wait_after_trigger) {
 
-        while (world->has_more_step_to_run()){usleep(1000);}
+        while (world->has_more_step_to_run()){usleep(1000);} // Make sure the previous step is done
 
         int sim_interval_ms = world->sim_interval / 1000;
         int num_steps = number_of_ms /  sim_interval_ms;
@@ -377,6 +377,9 @@ struct StageSimulator
             PRINT_ERR2("Step simulation of %d steps (%d ms)", num_steps, num_steps*sim_interval_ms);
         }
         world->UnpauseForNumSteps(num_steps);
+        if (wait_after_trigger) {
+            while (world->has_more_step_to_run()) { usleep(1000); } // Make sure this step is done
+        }
         return true;
     }
 
