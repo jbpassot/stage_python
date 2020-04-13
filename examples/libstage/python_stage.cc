@@ -176,6 +176,8 @@ public:
 
       //Read status of the robot
       velocity = robots[0].position->GetVelocity();
+      odom_pose = robots[0].position->GetPose();
+      global_pose = robots[0].position->GetGlobalPose();
 
       if (debug){
           PRINT_ERR1("%s", world->ClockString().c_str());
@@ -193,8 +195,12 @@ public:
       // Filling robot state
       const double interval((double)world->sim_interval / 1e6);
       robot_state.timestamp_us = world->SimTimeNow();
-      robot_state.traction_left_distance_mm += robot_state.wheel_distance* (2*velocity.x + velocity.a) / 2.;
-      robot_state.traction_right_distance_mm += robot_state.wheel_distance* (2*velocity.x - velocity.a) / 2.;
+
+      double left_velocity = velocity.x - 0.5*(velocity.a*robot_state.wheel_distance);
+      double right_velocity = velocity.x + 0.5*(velocity.a*robot_state.wheel_distance);
+      robot_state.traction_left_distance_mm += (left_velocity*interval) * 1000.;
+      robot_state.traction_right_distance_mm += (right_velocity*interval) * 1000.;
+
       robot_state.angular_velocity_rad_per_sec = velocity.a;
       robot_state.heading_angle_rad += velocity.a * interval;
 
@@ -226,9 +232,8 @@ protected:
   unsigned int population_size;
   Robot *robots;
 
-    Stg::Velocity velocity;
-    Stg::ModelRanger *rgr;
-    Stg::usec_t last_timestamp_us_command;
+  Stg::ModelRanger *rgr;
+  Stg::usec_t last_timestamp_us_command;
 
 
 public:
@@ -237,6 +242,10 @@ public:
     LidarState lidar_state;
     CameraState camera_state;
     std::string world_file;
+
+    Stg::Pose odom_pose;
+    Stg::Pose global_pose;
+    Stg::Velocity velocity;
 };
 
 
@@ -285,12 +294,29 @@ struct StageSimulator
     }
 
 
-    DoubleVectorType get_odom(){
-        Stg::Velocity velocity = logic->get_odometry_data();
-        DoubleVectorType odom;
-        odom.push_back(velocity.x);
-        odom.push_back(velocity.y);
-        odom.push_back(velocity.a);
+    boost::python::object get_odom(){
+        boost::python::dict odom;
+        Stg::Velocity velocity = logic->velocity;
+        Stg::Pose odom_pose = logic->odom_pose;
+        Stg::Pose global_pose = logic->global_pose;
+
+        DoubleVectorType odom_velocity_vect, odom_pose_vect, global_pose_vect;
+        odom_velocity_vect.push_back(velocity.x);
+        odom_velocity_vect.push_back(velocity.y);
+        odom_velocity_vect.push_back(velocity.a);
+
+        odom_pose_vect.push_back(odom_pose.x);
+        odom_pose_vect.push_back(odom_pose.y);
+        odom_pose_vect.push_back(odom_pose.a);
+
+        global_pose_vect.push_back(global_pose.x);
+        global_pose_vect.push_back(global_pose.y);
+        global_pose_vect.push_back(global_pose.z);
+
+        odom["velocity"]=odom_velocity_vect;
+        odom["pose"]=odom_pose_vect;
+        odom["global_pose"]=global_pose_vect;
+
         return odom;
     }
 
@@ -395,6 +421,15 @@ struct StageSimulator
         world->Lock();
     }
 
+    void start_simulation(){
+        world->Start();
+    }
+
+    Stg::usec_t get_timestamp_us(){
+        timestamp_us = world->SimTimeNow();
+        return timestamp_us;
+    }
+
     std::string world_file;
     Stg::WorldGui * world;
     Logic * logic;
@@ -432,6 +467,8 @@ BOOST_PYTHON_MODULE(stagesim)
             .def("has_simulation_stepped", &StageSimulator::has_simulation_stepped)
             .def("release_simulation", &StageSimulator::release_simulation)
             .def("lock_simulation", &StageSimulator::lock_simulation)
+            .def("start_simulation", &StageSimulator::start_simulation)
+            .def("get_timestamp_us", &StageSimulator::get_timestamp_us)
             ;
 }
 

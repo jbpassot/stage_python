@@ -1,3 +1,5 @@
+# export CPLUS_INCLUDE_PATH=/usr/include/python2.7
+
 set( stestbinarySrcs python_stage.cc)
 set_source_files_properties( ${stestbinarySrcs} PROPERTIES COMPILE_FLAGS "${FLTK_CFLAGS}" )
 add_executable( stestbinary ${stestbinarySrcs} )
