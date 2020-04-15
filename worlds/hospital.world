@@ -30,7 +30,7 @@ window
   scale 22.341 
 
   show_data 1
-  interval 40
+  interval 50
 )
 
 # load an environment bitmap

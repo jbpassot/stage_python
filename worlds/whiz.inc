@@ -1,3 +1,5 @@
+include "sick.inc"
+
 # The Whiz Robot
 define whiz_base position
 (
@@ -23,10 +25,7 @@ define whiz_base position
     velocity_bounds [-0.5 0.5 0 0 0 0 -90.0 90.0 ]
     acceleration_bounds [-0.5 0.5 0 0 0 0 -90 90.0 ]
 
-
-
-
-
+    trail_length 400
 )
 
 
@@ -34,10 +33,10 @@ define whiz whiz_base
 (  
 
  # actual size
-    size [0.4 0.44 0.5] # sizes
+    size [0.4 0.44 0.45] # sizes
 
     # the Whiz center of rotation is offset from its center of area ??
-    origin [-0.04 0 0 0]
+    origin [0 0 0 0]
 
     # estimated mass in KG
     mass 23.0
@@ -46,8 +45,8 @@ define whiz whiz_base
 
   # whiz sick will be ranger:0
   sicklaser(
-    pose [ 0.05 0. -0.3 0.000 ]
-    update_interval 100
+    pose [ 0.16546 0. -0.3 0.000 ]
+    update_interval 50
   )
    # add a camera to the robot
     camera(
@@ -71,7 +70,7 @@ define whiz whiz_base
     point[5] [0.2 0.12]
     point[6] [0.12 0.2555]
     point[7] [-0.12 0.2555]
-    z [0 0.1]
+    z [0 0.45]
   )
 )
 

@@ -425,6 +425,10 @@ struct StageSimulator
         world->Start();
     }
 
+    void stop_simulation(){
+        world->Stop();
+    }
+
     Stg::usec_t get_timestamp_us(){
         timestamp_us = world->SimTimeNow();
         return timestamp_us;
@@ -468,6 +472,7 @@ BOOST_PYTHON_MODULE(stagesim)
             .def("release_simulation", &StageSimulator::release_simulation)
             .def("lock_simulation", &StageSimulator::lock_simulation)
             .def("start_simulation", &StageSimulator::start_simulation)
+            .def("stop_simulation", &StageSimulator::stop_simulation)
             .def("get_timestamp_us", &StageSimulator::get_timestamp_us)
             ;
 }

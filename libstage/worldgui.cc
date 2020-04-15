@@ -143,7 +143,6 @@ screenshots" option from the view menu to start recording images and
 then select the option from the menu again to stop.
 
 */
-
 #include <FL/Fl_File_Chooser.H>
 #include <FL/Fl_Image.H>
 #include <FL/Fl_Output.H>
@@ -162,8 +161,12 @@ then select the option from the menu again to stop.
 #include "options_dlg.hh"
 #include "region.hh"
 #include "worldfile.hh"
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/lock_guard.hpp>
 
 using namespace Stg;
+
+boost::mutex mtx_;
 
 static const char *AboutText = "\n"
                                "Part of the Player Project\n"
@@ -450,16 +453,25 @@ bool WorldGui::Save(const char *filename)
 
 static void UpdateCallback(WorldGui *world)
 {
+    boost::lock_guard<boost::mutex> guard(mtx_);
   //TODO Should we sleep for a ms before we return ?
-  if (world->paused) return ;
-  world->Update();
+
+
+  if (world->paused) {
+      //PRINT_ERR("UpdateCallback: World is paused !");
+      return;
+  }
+    //PRINT_ERR("UpdateCallback: World is not paused !");
+    world->Update();
+    //PRINT_ERR("UpdateCallback: end World->Update call");
 }
 
 bool WorldGui::Update()
 {
-
-  if (speedup > 0)
+  if (speedup > 0){
     Fl::repeat_timeout((sim_interval / 1e6) / speedup, (Fl_Timeout_Handler)UpdateCallback, this);
+    //PRINT_ERR1("Repeat in %f", (sim_interval / 1e6) / speedup);
+  }
   // else we're called by an idle callback
 
   // printf( "speedup %.2f timeout %.6f\n", speedup, timeout );
@@ -487,12 +499,12 @@ bool WorldGui::Update()
   if (this->number_of_steps_to_run>=0){
       this->number_of_steps_to_run--;
       if (this->number_of_steps_to_run == 0){
+          //PRINT_ERR("Pause == true");
           this->paused = true;
           this->number_of_steps_to_run = -1;
       }
   }
-
-    return done;
+  return done;
 }
 
 std::string WorldGui::ClockString() const
@@ -568,22 +580,60 @@ void WorldGui::DrawVoxels() const
     it->second->DrawVoxels(layer);
 }
 
+void WorldGui::Start()
+{
+
+    boost::lock_guard<boost::mutex> guard(mtx_);
+    //PRINT_ERR("Starting the world");
+
+    PRINT_DEBUG("Starting the simulation");
+    World::Start();
+
+    // start the timer that causes regular redraws
+    Fl::add_timeout(((double)canvas->interval / 1000), (Fl_Timeout_Handler)Canvas::TimerCallback,
+                    canvas);
+
+    SetTimeouts();
+}
+
+void WorldGui::Stop()
+{
+    //PRINT_ERR("Stopping the simulation");
+    boost::lock_guard<boost::mutex> guard(mtx_);
+    World::Stop();
+
+    Fl::remove_timeout((Fl_Timeout_Handler)Canvas::TimerCallback);
+    Fl::remove_timeout((Fl_Timeout_Handler)UpdateCallback);
+    Fl::remove_idle((Fl_Timeout_Handler)UpdateCallback, this);
+
+    // drawn 'cos we cancelled the timeout
+    canvas->redraw(); // in case something happened that will never be
+    // drawn otherwise
+}
+
 void WorldGui::UnpauseForNumSteps(int steps)
 {
-    this->number_of_steps_to_run = steps;
+    boost::lock_guard<boost::mutex> guard(mtx_);
+    //PRINT_ERR1("Unpause of Num Steps %d", steps);
     this->paused = false;
+    this->number_of_steps_to_run = steps;
+
+    Fl::remove_idle((Fl_Timeout_Handler)UpdateCallback, this);
+    Fl::remove_timeout((Fl_Timeout_Handler)UpdateCallback);
+    Fl::repeat_timeout((sim_interval / 1e6) / speedup, (Fl_Timeout_Handler)UpdateCallback, this);
 }
 
 void WorldGui::Unlock() {
+    boost::lock_guard<boost::mutex> guard(mtx_);
     this->number_of_steps_to_run = -1;
-    this->Stop();
     this->paused = true;
 }
 
 void WorldGui::Lock() {
+    boost::lock_guard<boost::mutex> guard(mtx_);
     this->number_of_steps_to_run = 0;
-    this->Start();
-    this->paused = true;
+    this->paused = false;
+    //PRINT_ERR("Locking the simulation !");
 }
 
 
@@ -710,17 +760,7 @@ void WorldGui::Redraw()
     canvas->redraw();
 }
 
-void WorldGui::Start()
-{
-    PRINT_DEBUG("Starting the simulation");
-    World::Start();
 
-  // start the timer that causes regular redraws
-  Fl::add_timeout(((double)canvas->interval / 1000), (Fl_Timeout_Handler)Canvas::TimerCallback,
-                  canvas);
-
-  SetTimeouts();
-}
 
 void WorldGui::SetTimeouts()
 {
@@ -736,19 +776,7 @@ void WorldGui::SetTimeouts()
     Fl::add_idle((Fl_Timeout_Handler)UpdateCallback, this);
 }
 
-void WorldGui::Stop()
-{
-  PRINT_DEBUG("Stopping the simulation");
-  World::Stop();
 
-  Fl::remove_timeout((Fl_Timeout_Handler)Canvas::TimerCallback);
-  Fl::remove_timeout((Fl_Timeout_Handler)UpdateCallback);
-  Fl::remove_idle((Fl_Timeout_Handler)UpdateCallback, this);
-
-  // drawn 'cos we cancelled the timeout
-  canvas->redraw(); // in case something happened that will never be
-  // drawn otherwise
-}
 
 void WorldGui::pauseCb(Fl_Widget *, WorldGui *wg)
 {

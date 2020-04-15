@@ -61,8 +61,10 @@ set_target_properties( stage PROPERTIES
 		       VERSION ${VERSION}
 #           LINK_FLAGS "${FLTK_LDFLAGS}"  
 )
+find_package(Boost COMPONENTS thread system REQUIRED)
 
-target_link_libraries( stage 
+target_link_libraries( stage
+					   ${Boost_LIBRARIES}
                        ${LTDL_LIB} 
                        ${JPEG_LIBRARIES} 
                        ${PNG_LIBRARIES}
