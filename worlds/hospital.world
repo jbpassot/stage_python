@@ -24,7 +24,7 @@ interval_sim 50.
 window
 ( 
   #size [ 2000 1500 ]
-  size [ 800 600 ]
+  size [  1200 900  ]
   center [-43.786 -13.635]
   rotate [ 0.000 0.000 ]
   scale 22.341 
@@ -46,12 +46,6 @@ zone
   size [ 1.000 1.000 0.01 ]
   color "green"
   pose [ -45.000 -13.000 0 0 ]
-  name "source"
-
-  ctrl "source 1" # argument is the local storage capacity
-
-  # will replace consumed flags every update, so call only occasionally
-  update_interval 10000
 )
 
 define home_marker model
