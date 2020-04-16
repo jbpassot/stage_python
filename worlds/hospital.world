@@ -41,6 +41,37 @@ floorplan
   bitmap "./bitmaps/hospital.png"
 )
 
+zone
+(
+  size [ 1.000 1.000 0.01 ]
+  color "green"
+  pose [ -45.000 -13.000 0 0 ]
+  name "source"
+
+  ctrl "source 1" # argument is the local storage capacity
+
+  # will replace consumed flags every update, so call only occasionally
+  update_interval 10000
+)
+
+define home_marker model
+(
+  size [ 0.100 0.300 0.100 ]
+  color "purple"
+
+  # side blocks to restrict view angle
+  model( color "purple" size [0.100 0.050 0.250] pose [ 0 0.100 0 0 ] )
+  model( color "purple" size [0.100 0.050 0.250] pose [ 0 -0.100 0 0 ] )
+
+  model(
+     pose [ 0.010 0 0 0 ]
+     color "yellow"
+     size [ 0.050 0.200 0.100 ]
+     alwayson 1 # so we give charge without any explicit subscriber
+   )
+)
+
+home_marker(  pose [ -45 -13 0.5 90 ] fiducial_return 9 )
 
 whiz
 (
@@ -59,6 +90,5 @@ whiz
   localization_origin [ 0 0 0 0 ]
 
   trail_length 400
-
-
+  fiducial(range_max 1 fov 60 pose [ 0 0 0.05 0 ] )
 )

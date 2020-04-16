@@ -1,12 +1,3 @@
-/////////////////////////////////
-// File: stest.c
-// Desc: Stage library test program
-// Created: 2004.9.15
-// Author: Richard Vaughan <vaughan@sfu.ca>
-// CVS: $Id: stest.cc,v 1.1 2008-01-15 01:29:10 rtv Exp $
-// License: GPL
-/////////////////////////////////
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,6 +84,7 @@ public:
   Stg::ModelPosition *position;
   Stg::ModelRanger *ranger;
   Stg::ModelCamera *camera;
+  Stg::ModelFiducial *fiducial;
 };
 
 class Logic {
@@ -138,21 +130,24 @@ public:
         assert(posmod != 0);
 
 
+
         robot_state.wheel_distance = posmod->wheeldistance;
         robots[idx].position = posmod;
         robots[idx].position->Subscribe();
+
+        robots[idx].fiducial = (Stg::ModelFiducial *)robots[idx].position->GetUnusedModelOfType("fiducial");
+        robots[idx].fiducial ->AddCallback(Stg::Model::CB_UPDATE, (Stg::model_callback_t)FiducialUpdate, this);
+        robots[idx].fiducial ->Subscribe();
 
         // get the robot's camera model and subscribe to it
         Stg::ModelCamera *cammod =
                 reinterpret_cast<Stg::ModelCamera *>(robots[idx].position->GetChild("camera:0"));
         robots[idx].camera = cammod;
-
-
-        if (cammod)
+        if (cammod){
             camera_state.camera_width = robots[idx].camera->getWidth();
             camera_state.camera_height = robots[idx].camera->getHeight();
             robots[idx].camera->Subscribe();
-
+        }
         // get the robot's ranger model and subscribe to it
         Stg::ModelRanger *rngmod =
           reinterpret_cast<Stg::ModelRanger *>(robots[idx].position->GetChild("ranger:0"));
@@ -166,6 +161,25 @@ public:
         world->AddUpdateCallback(Logic::Callback, reinterpret_cast<void *>(this));
   }
 
+    static int FiducialUpdate(Stg::ModelFiducial *mod, Robot *robot)
+    {
+        std::vector<Stg::ModelFiducial::Fiducial> &fids = mod->GetFiducials();
+
+        for (unsigned int i = 0; i < fids.size(); i++) {
+            // printf( "fiducial %d is %d at %.2f m %.2f radians\n",
+            //	  i, f->id, f->range, f->bearing );
+
+            if (fids[i].id == 9) // I see a charging station
+            {
+                PRINT_WARN3("Seeing home marker at bearing %f, range %f, heading %f", fids[i].bearing, fids[i].range, fids[i].geom.a);
+                // record that I've seen it and where it is
+                // printf( "charger at %.2f radians\n", robot->charger_bearing );
+                break;
+            }
+        }
+
+        return 0; // run again
+    }
 
   ~Logic() { delete[] robots; }
   void Tick(Stg::World * world) {
