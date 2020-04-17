@@ -85,4 +85,13 @@ whiz
 
   trail_length 400
   fiducial(range_max 1 fov 60 pose [ 0 0 0.05 0 ] )
+
+   # this bumper array VERY crudely approximates the Whiz's bumpers
+    bumper( size [.01 .01 .01 0]
+            bcount 2
+            blength .1
+            bpose[0] [0.12  0.12 .02  30]
+            bpose[1] [0.12 -0.12 .02 -30]
+          )
+
 )

@@ -85,6 +85,7 @@ public:
   Stg::ModelRanger *ranger;
   Stg::ModelCamera *camera;
   Stg::ModelFiducial *fiducial;
+  Stg::ModelBumper *bumpers;
 };
 
 class Logic {
@@ -138,6 +139,11 @@ public:
         robots[idx].fiducial = (Stg::ModelFiducial *)robots[idx].position->GetUnusedModelOfType("fiducial");
         robots[idx].fiducial ->AddCallback(Stg::Model::CB_UPDATE, (Stg::model_callback_t)FiducialUpdate, this);
         robots[idx].fiducial ->Subscribe();
+
+        robots[idx].bumpers = reinterpret_cast<Stg::ModelBumper *>(robots[idx].position->GetChild("bumper:0"));
+          if (robots[idx].bumpers){
+              robots[idx].bumpers->Subscribe();
+          }
 
         // get the robot's camera model and subscribe to it
         Stg::ModelCamera *cammod =
@@ -196,6 +202,18 @@ public:
       if (debug){
           PRINT_ERR1("%s", world->ClockString().c_str());
           PRINT_ERR2("Robot Speed (%f, %f)", velocity.x, velocity.a);
+      }
+
+      Stg::ModelBumper * bump = robots[0].bumpers;
+      if ((bump->samples && bump->bumpers && bump->bumper_count)) {
+
+          if (bump->samples[0].hit){
+              PRINT_ERR("HITING BUMPER 0");
+          }
+          if (bump->samples[1].hit)
+          {
+              PRINT_ERR("HITING BUMPER 1");
+          }
       }
 
       // Filling scan state
