@@ -68,7 +68,7 @@ class CameraState{
 public:
     Stg::usec_t timestamp_us;
     std::vector<float> depth_data;
-    std::vector<float> rgb_data;
+    std::vector<unsigned char> rgb_data;
     int camera_width = 0;
     int camera_height = 0;
 
@@ -221,6 +221,7 @@ public:
           PRINT_ERR2("Robot Speed (%f, %f)", velocity.x, velocity.a);
       }
 
+      /*
       Stg::ModelBumper * bump = robots[0].bumpers;
       if ((bump->samples && bump->bumpers && bump->bumper_count)) {
 
@@ -231,7 +232,7 @@ public:
           {
               PRINT_ERR("HITING BUMPER 1");
           }
-      }
+      }*/
 
       // Filling scan state
       lidar_state.timestamp_us = robots[0].ranger->last_update;
@@ -256,11 +257,18 @@ public:
       // Filling Camera state
       if (robots[0].camera != NULL && robots[0].camera->last_update > camera_state.timestamp_us) {
           float *depth_data_camera = (float *) robots[0].camera->FrameDepth();
-          float *rgb_data_camera = (float *) robots[0].camera->FrameColor();
           int size = robots[0].camera->getWidth() * robots[0].camera->getHeight();
           if (size && depth_data_camera) {
               camera_state.depth_data.resize(size);
               std::copy(depth_data_camera, depth_data_camera + size, camera_state.depth_data.begin());
+
+          }
+
+          //RGB
+          unsigned char * rgb_data_camera = (unsigned char *) robots[0].camera->FrameColor();
+          if (size && rgb_data_camera) {
+              camera_state.rgb_data.resize(size*4);
+              std::copy(rgb_data_camera, rgb_data_camera + size*4, camera_state.rgb_data.begin());
           }
           camera_state.timestamp_us = robots[0].camera->last_update;
       }
@@ -399,6 +407,19 @@ struct StageSimulator
         return depth_data_dict;
     }
 
+    boost::python::object get_rgb_data(){
+        boost::python::dict rgb_data_dict;
+        std::vector<unsigned char> rgb_data =  logic->camera_state.rgb_data;
+        rgb_data_dict["timestamp_us"] = logic->camera_state.timestamp_us;
+        rgb_data_dict["width"] = logic->camera_state.camera_width;
+        rgb_data_dict["height"] = logic->camera_state.camera_height;
+        rgb_data_dict["data"] = NULL;
+        if (rgb_data.size() > 0) {
+            rgb_data_dict["data"] = stdUnsignedCharVecToNumpyArray(rgb_data);
+        }
+        return rgb_data_dict;
+    }
+
     boost::python::dict get_robot_state( )
     {
         boost::python::dict robot_state_dict;
@@ -423,6 +444,11 @@ struct StageSimulator
         home_marker_dict["bearing"] = logic->fiducial_state.bearing;
         return home_marker_dict;
     }
+
+    Stg::usec_t get_robot_state_timestamp_us(){return logic->robot_state.timestamp_us;}
+    Stg::usec_t get_depth_data_timestamp_us(){return logic->camera_state.timestamp_us;}
+    Stg::usec_t get_rgb_data_timestamp_us(){return logic->camera_state.timestamp_us;}
+    Stg::usec_t get_scan_data_timestamp_us(){return logic->lidar_state.timestamp_us;}
 
     int get_camera_width(){
         return logic->camera_state.camera_width;
@@ -523,10 +549,20 @@ BOOST_PYTHON_MODULE(stagesim)
             .def("run", &StageSimulator::run)
             .def("get_odom", &StageSimulator::get_odom)
             .def("get_scan_data", &StageSimulator::get_scan_data)
-            .def("get_depth_data", &StageSimulator::get_depth_data)
+            .def("get_scan_data_timestamp_us", &StageSimulator::get_scan_data_timestamp_us)
+
             .def("get_camera_width", &StageSimulator::get_camera_width)
             .def("get_camera_height", &StageSimulator::get_camera_height)
+
+            .def("get_depth_data", &StageSimulator::get_depth_data)
+            .def("get_depth_data_timestamp_us", &StageSimulator::get_depth_data_timestamp_us)
+
+            .def("get_rgb_data", &StageSimulator::get_rgb_data)
+            .def("get_rgb_data_timestamp_us", &StageSimulator::get_rgb_data_timestamp_us)
+
             .def("get_robot_state", &StageSimulator::get_robot_state)
+            .def("get_robot_state_timestamp_us", &StageSimulator::get_robot_state_timestamp_us)
+
             .def("send_command", &StageSimulator::send_command)
             .def("step_simulation_async", &StageSimulator::step_simulation_async)
             .def("step_simulation_sync", &StageSimulator::step_simulation_sync)

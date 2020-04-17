@@ -66,16 +66,26 @@ if __name__ == "__main__":
     left_wheel_desired_velocity = 0.
     right_wheel_desired_velocity = 0.
 
+    last_robot_state_timestamp_us = -1
+    last_depth_data_timestamp_us = -1
+    last_lidar_data_timestamp_us = -1
+    last_rgb_data_timestamp_us = -1
+
+
     while (True):
         # print (sim.get_info())
         # odom = sim.get_odom()
-        robot_state = sim.get_robot_state()
-        lidar_data = sim.get_scan_data()
-        depth_data = sim.get_depth_data()
+        if sim.get_robot_state_timestamp_us() > last_robot_state_timestamp_us: robot_state = sim.get_robot_state()
+        if sim.get_scan_data_timestamp_us() > last_lidar_data_timestamp_us: lidar_data = sim.get_scan_data()
+        if sim.get_depth_data_timestamp_us() > last_depth_data_timestamp_us: depth_data = sim.get_depth_data()
+        if sim.get_rgb_data_timestamp_us() > last_rgb_data_timestamp_us: rgb_data = sim.get_rgb_data()
+
+        last_robot_state_timestamp_us = sim.get_robot_state_timestamp_us()
+        last_lidar_data_timestamp_us = sim.get_scan_data_timestamp_us()
+        last_depth_data_timestamp_us = sim.get_depth_data_timestamp_us()
+        last_rgb_data_timestamp_us =  sim.get_rgb_data_timestamp_us()
+
         homing_data = sim.get_home_marker()
-        
-        # print robot state here
-        # print (robot_state)
 
         if depth_data["timestamp_us"] > 0:
             width = depth_data["width"]
@@ -85,6 +95,16 @@ if __name__ == "__main__":
             imshow_scaled("camera", camera, scaling=1)
         else:
             imshow_scaled("camera", np.zeros((300, 300)), scaling=1)
+
+
+        if rgb_data["timestamp_us"] > 0:
+            width = rgb_data["width"]
+            height = rgb_data["height"]
+            camera = rgb_data["data"].reshape((height,width, 4))
+            camera = camera[::-1,...]
+            imshow_scaled("rgb camera", camera, scaling=1)
+        else:
+            imshow_scaled("rgb camera", np.zeros((300, 300)), scaling=1)
 
         key = chr(key%256)
 
