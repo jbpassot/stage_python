@@ -172,6 +172,7 @@ public:
             camera_state.camera_width = robots[idx].camera->getWidth();
             camera_state.camera_height = robots[idx].camera->getHeight();
             robots[idx].camera->Subscribe();
+            _camera_enable = true;
             //robots[idx].camera->enable_camera(false);
         }
         // get the robot's ranger model and subscribe to it
@@ -259,6 +260,11 @@ public:
       robot_state.angular_velocity_rad_per_sec = velocity.a;
       robot_state.heading_angle_rad += velocity.a * interval;
 
+      if (_camera_enable != camera_state.enabled && robots[0].camera != NULL){
+          _camera_enable = camera_state.enabled;
+          robots[0].camera->enable_camera(_camera_enable);
+      }
+
       // Filling Camera state
       if (camera_state.enabled && robots[0].camera != NULL && robots[0].camera->last_update > camera_state.timestamp_us) {
 
@@ -295,6 +301,7 @@ protected:
 
   Stg::ModelRanger *rgr;
   Stg::usec_t last_timestamp_us_command;
+  bool _camera_enable;
 
 
 public:
@@ -308,6 +315,7 @@ public:
     Stg::Pose odom_pose;
     Stg::Pose global_pose;
     Stg::Velocity velocity;
+
 };
 
 
