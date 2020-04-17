@@ -254,7 +254,7 @@ public:
       robot_state.heading_angle_rad += velocity.a * interval;
 
       // Filling Camera state
-      if (robots[0].camera != NULL) {
+      if (robots[0].camera != NULL && robots[0].camera->last_update > camera_state.timestamp_us) {
           float *depth_data_camera = (float *) robots[0].camera->FrameDepth();
           float *rgb_data_camera = (float *) robots[0].camera->FrameColor();
           int size = robots[0].camera->getWidth() * robots[0].camera->getHeight();

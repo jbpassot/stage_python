@@ -49,15 +49,15 @@ define whiz whiz_base
     update_interval 50
   )
    # add a camera to the robot
-   # camera(
-   #   pose [ 0 0 0.1 0.000 ]
-   #   range [ 0.1 8.0 ]
-   #   resolution [ 600 450 ]
-   #   fov [ 60 45 ]
-   #   pantilt [ 0 0 ]
-   #  alwayson 1
-   #   update_interval 200
-   # )
+    camera(
+      pose [ 0 0 0.1 0.000 ]
+      range [ 0.1 8.0 ]
+      resolution [ 600 450 ]
+      fov [ 60 45 ]
+      pantilt [ 0 0 ]
+     alwayson 1
+      update_interval 200
+    )
  # simplified Body shape:
   block(
     points 8
