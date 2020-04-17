@@ -72,8 +72,10 @@ public:
     int camera_width = 0;
     int camera_height = 0;
 
+    bool enabled;
+
     CameraState():
-        depth_data(),rgb_data(),camera_width(0),camera_height(0), timestamp_us(0)
+        depth_data(),rgb_data(),camera_width(0),camera_height(0), timestamp_us(0), enabled(true)
     {}
 };
 
@@ -134,6 +136,10 @@ public:
     return velocity;
   }
 
+   Stg::ModelCamera *  get_camera(){
+      return robots[0].camera;
+  }
+
   void connect(Stg::World *world){
         int idx = 0;
         // the robots' models are named r0 .. r1999
@@ -144,8 +150,6 @@ public:
         Stg::ModelPosition *posmod =
           reinterpret_cast<Stg::ModelPosition *>(world->GetModel(name.str()));
         assert(posmod != 0);
-
-
 
         robot_state.wheel_distance = posmod->wheeldistance;
         robots[idx].position = posmod;
@@ -168,6 +172,7 @@ public:
             camera_state.camera_width = robots[idx].camera->getWidth();
             camera_state.camera_height = robots[idx].camera->getHeight();
             robots[idx].camera->Subscribe();
+            //robots[idx].camera->enable_camera(false);
         }
         // get the robot's ranger model and subscribe to it
         Stg::ModelRanger *rngmod =
@@ -255,20 +260,19 @@ public:
       robot_state.heading_angle_rad += velocity.a * interval;
 
       // Filling Camera state
-      if (robots[0].camera != NULL && robots[0].camera->last_update > camera_state.timestamp_us) {
+      if (camera_state.enabled && robots[0].camera != NULL && robots[0].camera->last_update > camera_state.timestamp_us) {
+
           float *depth_data_camera = (float *) robots[0].camera->FrameDepth();
           int size = robots[0].camera->getWidth() * robots[0].camera->getHeight();
           if (size && depth_data_camera) {
               camera_state.depth_data.resize(size);
               std::copy(depth_data_camera, depth_data_camera + size, camera_state.depth_data.begin());
-
           }
-
-          //RGB
-          unsigned char * rgb_data_camera = (unsigned char *) robots[0].camera->FrameColor();
+          camera_state.timestamp_us = robots[0].camera->last_update;
+          unsigned char *rgb_data_camera = (unsigned char *) robots[0].camera->FrameColor();
           if (size && rgb_data_camera) {
-              camera_state.rgb_data.resize(size*4);
-              std::copy(rgb_data_camera, rgb_data_camera + size*4, camera_state.rgb_data.begin());
+              camera_state.rgb_data.resize(size * 4);
+              std::copy(rgb_data_camera, rgb_data_camera + size * 4, camera_state.rgb_data.begin());
           }
           camera_state.timestamp_us = robots[0].camera->last_update;
       }
@@ -522,6 +526,15 @@ struct StageSimulator
         return timestamp_us;
     }
 
+    void enable_camera(){
+        logic->camera_state.enabled = true;
+    }
+
+    void disable_camera(){
+        logic->camera_state.enabled = false;
+    }
+
+
     std::string world_file;
     Stg::WorldGui * world;
     Logic * logic;
@@ -554,6 +567,8 @@ BOOST_PYTHON_MODULE(stagesim)
             .def("get_camera_width", &StageSimulator::get_camera_width)
             .def("get_camera_height", &StageSimulator::get_camera_height)
 
+            .def("enable_camera", &StageSimulator::enable_camera)
+            .def("disable_camera", &StageSimulator::disable_camera)
             .def("get_depth_data", &StageSimulator::get_depth_data)
             .def("get_depth_data_timestamp_us", &StageSimulator::get_depth_data_timestamp_us)
 

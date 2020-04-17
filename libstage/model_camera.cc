@@ -146,11 +146,15 @@ void ModelCamera::Load(void)
 
 void ModelCamera::Update(void)
 {
+
     if (this->world->SimTimeNow() - last_update < interval){
         PRINT_ERR("Camera update: TOO EARLY");
         return;
     }
-    GetFrame();
+    if (_enabled || _frame_data == NULL){
+        GetFrame();
+    }
+
     Model::Update();
 
 }

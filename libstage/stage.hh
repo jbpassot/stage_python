@@ -2722,6 +2722,8 @@ private:
   GLfloat *_frame_data; // opengl read buffer
   GLubyte *_frame_color_data; // opengl read buffer
 
+  bool _enabled = true;
+
   bool _valid_vertexbuf_cache;
   ColoredVertex *_vertexbuf_cache; // cached unit vectors with appropriate rotations (these must be
   // scalled by z-buffer length)
@@ -2775,6 +2777,10 @@ public:
   {
     _pitch_offset = pitch;
     _valid_vertexbuf_cache = false;
+  }
+
+  void enable_camera(bool enable){
+      _enabled = enable;
   }
 
   /// change the yaw
