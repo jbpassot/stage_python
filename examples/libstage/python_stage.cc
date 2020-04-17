@@ -78,6 +78,21 @@ public:
 };
 
 
+class FiducialState{
+public:
+    Stg::usec_t timestamp_us;
+    bool detected;
+    double bearing;
+    double range;
+    double heading;
+
+
+    FiducialState():
+            timestamp_us(0), detected(false),bearing(0.), range(0.), heading(0.)
+    {}
+};
+
+
 
 class Robot {
 public:
@@ -137,7 +152,7 @@ public:
         robots[idx].position->Subscribe();
 
         robots[idx].fiducial = (Stg::ModelFiducial *)robots[idx].position->GetUnusedModelOfType("fiducial");
-        robots[idx].fiducial ->AddCallback(Stg::Model::CB_UPDATE, (Stg::model_callback_t)FiducialUpdate, this);
+        robots[idx].fiducial ->AddCallback(Stg::Model::CB_UPDATE, (Stg::model_callback_t)FiducialUpdate, &fiducial_state);
         robots[idx].fiducial ->Subscribe();
 
         robots[idx].bumpers = reinterpret_cast<Stg::ModelBumper *>(robots[idx].position->GetChild("bumper:0"));
@@ -167,19 +182,21 @@ public:
         world->AddUpdateCallback(Logic::Callback, reinterpret_cast<void *>(this));
   }
 
-    static int FiducialUpdate(Stg::ModelFiducial *mod, Robot *robot)
+    static int FiducialUpdate(Stg::ModelFiducial *mod, FiducialState *fiducial)
     {
         std::vector<Stg::ModelFiducial::Fiducial> &fids = mod->GetFiducials();
 
+        fiducial->detected = false;
         for (unsigned int i = 0; i < fids.size(); i++) {
             // printf( "fiducial %d is %d at %.2f m %.2f radians\n",
             //	  i, f->id, f->range, f->bearing );
 
             if (fids[i].id == 9) // I see a charging station
             {
-                PRINT_WARN3("Seeing home marker at bearing %f, range %f, heading %f", fids[i].bearing, fids[i].range, fids[i].geom.a);
-                // record that I've seen it and where it is
-                // printf( "charger at %.2f radians\n", robot->charger_bearing );
+                fiducial->detected = true;
+                fiducial->range = fids[i].range;
+                fiducial->heading = fids[i].geom.a;
+                fiducial->bearing = fids[i].bearing;
                 break;
             }
         }
@@ -273,6 +290,7 @@ public:
     DifferentialDriveCommand drive_command;
     LidarState lidar_state;
     CameraState camera_state;
+    FiducialState fiducial_state;
     std::string world_file;
 
     Stg::Pose odom_pose;
@@ -394,6 +412,18 @@ struct StageSimulator
         return robot_state_dict;
     }
 
+    boost::python::dict get_home_marker( )
+    {
+        boost::python::dict home_marker_dict;
+
+        home_marker_dict["timestamp_us"] = logic->fiducial_state.timestamp_us;
+        home_marker_dict["detected"] = logic->fiducial_state.detected;
+        home_marker_dict["heading"] = logic->fiducial_state.heading;
+        home_marker_dict["range"] = logic->fiducial_state.range;
+        home_marker_dict["bearing"] = logic->fiducial_state.bearing;
+        return home_marker_dict;
+    }
+
     int get_camera_width(){
         return logic->camera_state.camera_width;
     }
@@ -506,6 +536,7 @@ BOOST_PYTHON_MODULE(stagesim)
             .def("start_simulation", &StageSimulator::start_simulation)
             .def("stop_simulation", &StageSimulator::stop_simulation)
             .def("get_timestamp_us", &StageSimulator::get_timestamp_us)
+            .def("get_home_marker", &StageSimulator::get_home_marker)
             ;
 }
 

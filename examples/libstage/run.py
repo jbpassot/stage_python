@@ -39,6 +39,7 @@ def toggle_lock_simulation(lock, sim):
     if lock:
         print ("Locking Simulation Environment (Stepping must be controlled by calling step_simulation)")
         sim.lock_simulation()
+        sim.start_simulation()
     else:
         print ("Unlocking Simulation Environment (Stepping is controlled within the simulator")
         sim.release_simulation()
@@ -71,7 +72,8 @@ if __name__ == "__main__":
         robot_state = sim.get_robot_state()
         lidar_data = sim.get_scan_data()
         depth_data = sim.get_depth_data()
-
+        homing_data = sim.get_home_marker()
+        
         # print robot state here
         # print (robot_state)
 
