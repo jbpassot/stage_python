@@ -556,7 +556,7 @@ BOOST_PYTHON_MODULE(stagesim)
 {
 
     Py_Initialize();
-    import_array()
+    //import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
 
     class_<DoubleVectorType>("DoubleVectorType")

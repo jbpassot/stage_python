@@ -1,4 +1,4 @@
-# export CPLUS_INCLUDE_PATH=/usr/include/python2.7
+# export CPLUS_INCLUDE_PATH=/usr/include/python3.5m
 
 set( stestbinarySrcs python_stage.cc)
 set_source_files_properties( ${stestbinarySrcs} PROPERTIES COMPILE_FLAGS "${FLTK_CFLAGS}" )
@@ -9,7 +9,7 @@ set_target_properties( stestbinary PROPERTIES OUTPUT_NAME stest )
 target_link_libraries( stestbinary stage )
 
 IF(PROJECT_OS_LINUX)
-  target_link_libraries( stestbinary stage pthread boost_python python2.7)
+  target_link_libraries( stestbinary stage pthread boost_python python3.5m)
 ENDIF(PROJECT_OS_LINUX)
 
 INSTALL(TARGETS stestbinary
@@ -23,7 +23,7 @@ add_library( stagesim MODULE ${stestbinarySrcs} )
 
 target_link_libraries( stagesim
         stage
-        pthread boost_python-py27 python2.7
+        pthread boost_python-py35 python3.5m
         )
 
 
