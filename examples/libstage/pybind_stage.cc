@@ -1,3 +1,15 @@
+/**
+ * @file pyblind_stage.cpp
+ *
+ * @copyright Software License Agreement (BSD License)
+ * Original work Copyright 2020 JB Passot
+ * All Rights Reserved.
+ * For a full description see the file named LICENSE.
+ *
+ * Original authors: JB Passot
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,15 +19,19 @@
 #include <cmath>
 
 #include "stage.hh"
-#include "python_utils.hh"
-#include <boost/python.hpp>
-#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 
-using namespace boost::python;
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+#include <pybind11/functional.h>
 
-typedef std::vector<double> DoubleVectorType;
-typedef std::vector<int> IntVectorType;
+namespace pybind11 {
+    template <typename T>
+    using safe_array = typename pybind11::array_t<T, pybind11::array::c_style>;
+}
 
+namespace py = pybind11;
+using namespace pybind11::literals;
 
 class DifferentialDriveCommand{
 public:
@@ -222,24 +238,6 @@ public:
       odom_pose = robots[0].position->GetPose();
       global_pose = robots[0].position->GetGlobalPose();
 
-      if (debug){
-          PRINT_ERR1("%s", world->ClockString().c_str());
-          PRINT_ERR2("Robot Speed (%f, %f)", velocity.x, velocity.a);
-      }
-
-      /*
-      Stg::ModelBumper * bump = robots[0].bumpers;
-      if ((bump->samples && bump->bumpers && bump->bumper_count)) {
-
-          if (bump->samples[0].hit){
-              PRINT_ERR("HITING BUMPER 0");
-          }
-          if (bump->samples[1].hit)
-          {
-              PRINT_ERR("HITING BUMPER 1");
-          }
-      }*/
-
       // Filling scan state
       lidar_state.timestamp_us = robots[0].ranger->last_update;
       lidar_state.ranges = robots[0].ranger->GetSensors()[0].ranges;
@@ -364,77 +362,78 @@ struct StageSimulator
     }
 
 
-    boost::python::object get_odom(){
-        boost::python::dict odom;
+    py::dict get_odom(){
+        py::dict odom;
         Stg::Velocity velocity = logic->velocity;
         Stg::Pose odom_pose = logic->odom_pose;
         Stg::Pose global_pose = logic->global_pose;
 
-        DoubleVectorType odom_velocity_vect, odom_pose_vect, global_pose_vect;
-        odom_velocity_vect.push_back(velocity.x);
-        odom_velocity_vect.push_back(velocity.y);
-        odom_velocity_vect.push_back(velocity.a);
-
-        odom_pose_vect.push_back(odom_pose.x);
-        odom_pose_vect.push_back(odom_pose.y);
-        odom_pose_vect.push_back(odom_pose.a);
-
-        global_pose_vect.push_back(global_pose.x);
-        global_pose_vect.push_back(global_pose.y);
-        global_pose_vect.push_back(global_pose.z);
-
-        odom["velocity"]=odom_velocity_vect;
-        odom["pose"]=odom_pose_vect;
-        odom["global_pose"]=global_pose_vect;
+        odom["velocity"]=py::make_tuple(velocity.x, velocity.y, velocity.a);
+        odom["pose"]=py::make_tuple(odom_pose.x, odom_pose.y, odom_pose.a);
+        odom["global_pose"]=py::make_tuple(global_pose.x, global_pose.y, global_pose.z);
 
         return odom;
     }
 
-    boost::python::object get_scan_data() {
-        boost::python::dict scan_data_dict;
+    py::dict get_scan_data() {
+        py::dict scan_data_dict;
         std::vector<double> ranges = logic->lidar_state.ranges;
         std::vector<double> intensities = logic->lidar_state.intensities;
         std::vector<double> bearings = logic->lidar_state.bearings;
         scan_data_dict["ranges"] = NULL;
         scan_data_dict["intensities"] = NULL;
         scan_data_dict["bearings"] = NULL;
-        if (ranges.size() > 0) scan_data_dict["ranges"] = stdDoubleVecToNumpyArray(ranges);
-        if (intensities.size() > 0) scan_data_dict["intensities"] = stdDoubleVecToNumpyArray(intensities);
-        if (bearings.size() > 0) scan_data_dict["bearings"] = stdDoubleVecToNumpyArray(bearings);
+
+        if (ranges.size() > 0){
+            py::safe_array<double> np_ranges = py::cast(ranges);
+            scan_data_dict["ranges"] = np_ranges;
+        }
+        if (intensities.size() > 0){
+            py::safe_array<double> np_intensities = py::cast(intensities);
+            scan_data_dict["intensities"] = np_intensities;
+        }
+        if (bearings.size() > 0){
+            py::safe_array<double> np_bearings = py::cast(bearings);
+            scan_data_dict["bearings"] = np_bearings;
+        }
         scan_data_dict["fov"] = logic->lidar_state.fov;
         scan_data_dict["timestamp_us"] = logic->lidar_state.timestamp_us;
         return scan_data_dict;
     }
 
 
-    boost::python::object get_depth_data(){
-        boost::python::dict depth_data_dict;
+    py::dict get_depth_data(){
+        py::dict depth_data_dict;
         std::vector<float> depth =  logic->camera_state.depth_data;
         depth_data_dict["timestamp_us"] = logic->camera_state.timestamp_us;
         depth_data_dict["width"] = logic->camera_state.camera_width;
         depth_data_dict["height"] = logic->camera_state.camera_height;
         depth_data_dict["data"] = NULL;
-        if (depth.size() > 0) depth_data_dict["data"] = stdFloatVecToNumpyArray(depth);
+        if (depth.size() > 0){
+            py::safe_array<float> np_depth = py::cast(depth);
+            depth_data_dict["data"] = np_depth;
+        }
 
         return depth_data_dict;
     }
 
-    boost::python::object get_rgb_data(){
-        boost::python::dict rgb_data_dict;
+    py::dict get_rgb_data(){
+        py::dict rgb_data_dict;
         std::vector<unsigned char> rgb_data =  logic->camera_state.rgb_data;
         rgb_data_dict["timestamp_us"] = logic->camera_state.timestamp_us;
         rgb_data_dict["width"] = logic->camera_state.camera_width;
         rgb_data_dict["height"] = logic->camera_state.camera_height;
         rgb_data_dict["data"] = NULL;
         if (rgb_data.size() > 0) {
-            rgb_data_dict["data"] = stdUnsignedCharVecToNumpyArray(rgb_data);
+            py::safe_array<unsigned char> np_rgb_data = py::cast(rgb_data);
+            rgb_data_dict["data"] = np_rgb_data;
         }
         return rgb_data_dict;
     }
 
-    boost::python::dict get_robot_state( )
+    py::dict get_robot_state( )
     {
-        boost::python::dict robot_state_dict;
+        py::dict robot_state_dict;
 
         robot_state_dict["timestamp_us"] = logic->robot_state.timestamp_us;
         robot_state_dict["traction_left_distance_mm"] = logic->robot_state.traction_left_distance_mm;
@@ -445,9 +444,9 @@ struct StageSimulator
         return robot_state_dict;
     }
 
-    boost::python::dict get_home_marker( )
+    py::dict get_home_marker( )
     {
-        boost::python::dict home_marker_dict;
+        py::dict home_marker_dict;
 
         home_marker_dict["timestamp_us"] = logic->fiducial_state.timestamp_us;
         home_marker_dict["detected"] = logic->fiducial_state.detected;
@@ -551,77 +550,42 @@ struct StageSimulator
 
 
 
-
-BOOST_PYTHON_MODULE(stagesim) {
-
-    Py_Initialize();
-    import_array()
-    numeric::array::set_module_and_type("numpy", "ndarray");
-
-    class_<DoubleVectorType>("DoubleVectorType")
-            .def(vector_indexing_suite<DoubleVectorType>());
-
-
-    class_<IntVectorType>("IntVectorType")
-            .def(vector_indexing_suite<IntVectorType>());
-
-    class_<StageSimulator>("StageSimulator", init<std::string>())
-            .def("run", &StageSimulator::run)
-            .def("get_odom", &StageSimulator::get_odom)
-            .def("get_scan_data", &StageSimulator::get_scan_data)
-            .def("get_scan_data_timestamp_us", &StageSimulator::get_scan_data_timestamp_us)
-
-            .def("get_camera_width", &StageSimulator::get_camera_width)
-            .def("get_camera_height", &StageSimulator::get_camera_height)
-
-            .def("enable_camera", &StageSimulator::enable_camera)
-            .def("disable_camera", &StageSimulator::disable_camera)
-            .def("get_depth_data", &StageSimulator::get_depth_data)
-            .def("get_depth_data_timestamp_us", &StageSimulator::get_depth_data_timestamp_us)
-
-            .def("get_rgb_data", &StageSimulator::get_rgb_data)
-            .def("get_rgb_data_timestamp_us", &StageSimulator::get_rgb_data_timestamp_us)
-
-            .def("get_robot_state", &StageSimulator::get_robot_state)
-            .def("get_robot_state_timestamp_us", &StageSimulator::get_robot_state_timestamp_us)
-
-            .def("send_command", &StageSimulator::send_command)
-            .def("step_simulation_async", &StageSimulator::step_simulation_async)
-            .def("step_simulation_sync", &StageSimulator::step_simulation_sync)
-            .def("has_simulation_stepped", &StageSimulator::has_simulation_stepped)
-            .def("release_simulation", &StageSimulator::release_simulation)
-            .def("lock_simulation", &StageSimulator::lock_simulation)
-            .def("start_simulation", &StageSimulator::start_simulation)
-            .def("stop_simulation", &StageSimulator::stop_simulation)
-            .def("get_timestamp_us", &StageSimulator::get_timestamp_us)
-            .def("get_home_marker", &StageSimulator::get_home_marker);
-}
-
-
-int main(int argc, char *argv[])
+/**
+ * @brief pybind module
+ * @details pybind module for stage simulator
+ *
+ */
+PYBIND11_MODULE(stagesim, m)
 {
-  // check and handle the argumets
-  if (argc < 3) {
-    puts("Usage: stest <worldfile> <number of robots>");
-    exit(0);
-  }
+    m.doc() = "Python wrapper for Stage Simulator";
+    py::class_<StageSimulator>(m, "StageSimulator")
+        .def(py::init<std::string>(), "config_filename"_a)
+        .def("get_odom", &StageSimulator::get_odom)
+        .def("get_scan_data", &StageSimulator::get_scan_data)
+        .def("get_scan_data_timestamp_us", &StageSimulator::get_scan_data_timestamp_us)
 
-  const int popsize = atoi(argv[2]);
+        .def("get_camera_width", &StageSimulator::get_camera_width)
+        .def("get_camera_height", &StageSimulator::get_camera_height)
 
-  // initialize libstage
-  Stg::Init(&argc, &argv);
+        .def("enable_camera", &StageSimulator::enable_camera)
+        .def("disable_camera", &StageSimulator::disable_camera)
+        .def("get_depth_data", &StageSimulator::get_depth_data)
+        .def("get_depth_data_timestamp_us", &StageSimulator::get_depth_data_timestamp_us)
 
-  // create the world
-  Stg::WorldGui world(800, 700, "Stage Benchmark Program");
-  std::string world_file(argv[1]);
-  world.Load(world_file.c_str());
+        .def("get_rgb_data", &StageSimulator::get_rgb_data)
+        .def("get_rgb_data_timestamp_us", &StageSimulator::get_rgb_data_timestamp_us)
 
-  // create the logic and connect it to the world
-  Logic logic(popsize, world_file);
-  logic.connect(&world);
+        .def("get_robot_state", &StageSimulator::get_robot_state)
+        .def("get_robot_state_timestamp_us", &StageSimulator::get_robot_state_timestamp_us)
 
-  // and then run the simulation
-  world.Run();
-
-  return 0;
+        .def("send_command", &StageSimulator::send_command)
+        .def("step_simulation_async", &StageSimulator::step_simulation_async)
+        .def("step_simulation_sync", &StageSimulator::step_simulation_sync)
+        .def("has_simulation_stepped", &StageSimulator::has_simulation_stepped)
+        .def("release_simulation", &StageSimulator::release_simulation)
+        .def("lock_simulation", &StageSimulator::lock_simulation)
+        .def("start_simulation", &StageSimulator::start_simulation)
+        .def("stop_simulation", &StageSimulator::stop_simulation)
+        .def("get_timestamp_us", &StageSimulator::get_timestamp_us)
+        .def("get_home_marker", &StageSimulator::get_home_marker);
 }
