@@ -1755,7 +1755,9 @@ creating the quadric for each flag */
     __CB_TYPE_COUNT //!< must be the last entry: counts the number of types
   } callback_type_t;
 
-  usec_t last_update; ///< time of last update in us, TODO JB write a getter
+    usec_t last_update; ///< time of last update in us, TODO JB write a getter
+    usec_t last_clock_update; ///< time of last update in us, TODO JB write a getter
+
 
 
 protected:

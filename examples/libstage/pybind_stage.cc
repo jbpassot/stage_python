@@ -248,7 +248,8 @@ public:
 
       // Filling scan state
       lidar_state.timestamp_us = robots[0].ranger->last_update;
-      lidar_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+      //lidar_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+      lidar_state.clock_us = robots[0].ranger->last_clock_update;
       lidar_state.ranges = robots[0].ranger->GetSensors()[0].ranges;
       lidar_state.intensities = robots[0].ranger->GetSensors()[0].intensities;
       lidar_state.bearings = robots[0].ranger->GetSensors()[0].bearings;
@@ -258,7 +259,8 @@ public:
       // Filling robot state
       const double interval((double)world->sim_interval / 1e6);
       robot_state.timestamp_us = world->SimTimeNow();
-      robot_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+      //robot_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+      robot_state.clock_us = robots[0].position->last_clock_update;
 
       double left_velocity = velocity.x - 0.5*(velocity.a*robot_state.wheel_distance);
       double right_velocity = velocity.x + 0.5*(velocity.a*robot_state.wheel_distance);
@@ -283,7 +285,8 @@ public:
               std::copy(depth_data_camera, depth_data_camera + size, camera_state.depth_data.begin());
           }
           camera_state.timestamp_us = robots[0].camera->last_update;
-          camera_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+          //camera_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+          camera_state.clock_us = robots[0].camera->last_clock_update;
           unsigned char *rgb_data_camera = (unsigned char *) robots[0].camera->FrameColor();
           if (size && rgb_data_camera) {
               camera_state.rgb_data.resize(size * 4);

@@ -140,7 +140,10 @@
 #include "file_manager.hh"
 #include "stage.hh"
 #include "worldfile.hh"
+#include <chrono>
+
 using namespace Stg;
+using namespace std::chrono;
 
 // static members
 uint32_t Model::count(0);
@@ -600,6 +603,7 @@ void Model::Update(void)
   //printf( "Q%d model %p %s update\n", event_queue_num, this, Token() );
 
   last_update = world->sim_time;
+  last_clock_update = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
   if (subs > 0) // no subscriptions means we don't need to be updated
     world->Enqueue(event_queue_num, interval, this, UpdateWrapper, NULL);
