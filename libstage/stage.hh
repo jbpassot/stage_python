@@ -2116,7 +2116,7 @@ public:
   Model()
       : mapped(false), alwayson(false), blockgroup(*this), boundary(false), data_fresh(false),
         disabled(true), friction(0), has_default_block(false), id(0), interval(0),
-        interval_energy(0), last_update(0), log_state(false), map_resolution(0), mass(0),
+        interval_energy(0), last_update(0), last_clock_update(0), log_state(false), map_resolution(0), mass(0),
         parent(NULL), power_pack(NULL), rebuild_displaylist(false), stack_children(true),
         stall(false), subs(0), thread_safe(false), trail_index(0), event_queue_num(0), used(false),
         watts(0), watts_give(0), watts_take(0), wf(NULL), wf_entity(0), world(NULL), world_gui(NULL)

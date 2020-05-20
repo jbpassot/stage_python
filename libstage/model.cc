@@ -237,7 +237,7 @@ Model::Model(World *world, Model *parent, const std::string &type, const std::st
       data_fresh(false), disabled(false), cv_list(), flag_list(), friction(DEFAULT_FRICTION),
       geom(), has_default_block(true), id(Model::count++), interval((usec_t)1e5), // 100msec
       interval_energy((usec_t)1e5), // 100msec
-      last_update(0), log_state(false), map_resolution(0.1), mass(0), parent(parent), pose(),
+      last_update(0),last_clock_update(0), log_state(false), map_resolution(0.1), mass(0), parent(parent), pose(),
       power_pack(NULL), pps_charging(), rastervis(), rebuild_displaylist(true), say_string(),
       stack_children(true), stall(false), subs(0), thread_safe(false), trail(20),
       trail_index(0),  trail_interval(10), type(type), event_queue_num(0), used(false), watts(0.0), watts_give(0.0),
