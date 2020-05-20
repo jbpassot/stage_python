@@ -18,6 +18,7 @@
 #include <iostream>
 #include <cmath>
 
+#include <chrono>
 #include "stage.hh"
 
 #include <pybind11/pybind11.h>
@@ -32,14 +33,17 @@ namespace pybind11 {
 
 namespace py = pybind11;
 using namespace pybind11::literals;
+using namespace std::chrono;
+using time_stamp = std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds>;
 
 class DifferentialDriveCommand{
 public:
     Stg::usec_t timestamp_us;
+    Stg::usec_t clock_us;
     double traction_left_wheel_speed;
     double traction_right_wheel_speed;
 
-    DifferentialDriveCommand(): timestamp_us(0), traction_left_wheel_speed(0.), traction_right_wheel_speed(0.)
+    DifferentialDriveCommand(): clock_us(0), timestamp_us(0), traction_left_wheel_speed(0.), traction_right_wheel_speed(0.)
     {}
 };
 
@@ -47,13 +51,14 @@ class DifferentialDriveState
 {
 public:
     Stg::usec_t timestamp_us;
+    Stg::usec_t clock_us;
     double traction_left_distance_mm;
     double traction_right_distance_mm;
     double heading_angle_rad;
     double angular_velocity_rad_per_sec;
     double wheel_distance;
 
-    DifferentialDriveState() : wheel_distance(0.413), timestamp_us(0), traction_left_distance_mm(0.),
+    DifferentialDriveState() : clock_us(0), wheel_distance(0.413), timestamp_us(0), traction_left_distance_mm(0.),
         traction_right_distance_mm(0.), heading_angle_rad(0.), angular_velocity_rad_per_sec(0.)
     {}
 };
@@ -61,6 +66,7 @@ public:
 class LidarState{
 public:
     Stg::usec_t timestamp_us;
+    Stg::usec_t clock_us;
     //Stg::Pose pose;
     //Stg::Bounds range;
     double fov;
@@ -75,7 +81,7 @@ public:
 
     LidarState():
     //pose(0, 0, 0, 0), range(0.0, 5.0),
-    fov(0.1), timestamp_us(0),
+    fov(0.1), clock_us(0), timestamp_us(0),
     sample_count(1), ranges(), intensities(), bearings()
     {}
 };
@@ -83,6 +89,7 @@ public:
 class CameraState{
 public:
     Stg::usec_t timestamp_us;
+    Stg::usec_t clock_us;
     std::vector<float> depth_data;
     std::vector<unsigned char> rgb_data;
     int camera_width = 0;
@@ -91,7 +98,7 @@ public:
     bool enabled;
 
     CameraState():
-        depth_data(),rgb_data(),camera_width(0),camera_height(0), timestamp_us(0), enabled(true)
+            clock_us(0), depth_data(),rgb_data(),camera_width(0),camera_height(0), timestamp_us(0), enabled(true)
     {}
 };
 
@@ -99,6 +106,7 @@ public:
 class FiducialState{
 public:
     Stg::usec_t timestamp_us;
+    Stg::usec_t clock_us;
     bool detected;
     double bearing;
     double range;
@@ -106,7 +114,7 @@ public:
 
 
     FiducialState():
-            timestamp_us(0), detected(false),bearing(0.), range(0.), heading(0.)
+            clock_us(0), timestamp_us(0), detected(false),bearing(0.), range(0.), heading(0.)
     {}
 };
 
@@ -240,6 +248,7 @@ public:
 
       // Filling scan state
       lidar_state.timestamp_us = robots[0].ranger->last_update;
+      lidar_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
       lidar_state.ranges = robots[0].ranger->GetSensors()[0].ranges;
       lidar_state.intensities = robots[0].ranger->GetSensors()[0].intensities;
       lidar_state.bearings = robots[0].ranger->GetSensors()[0].bearings;
@@ -249,6 +258,7 @@ public:
       // Filling robot state
       const double interval((double)world->sim_interval / 1e6);
       robot_state.timestamp_us = world->SimTimeNow();
+      robot_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
       double left_velocity = velocity.x - 0.5*(velocity.a*robot_state.wheel_distance);
       double right_velocity = velocity.x + 0.5*(velocity.a*robot_state.wheel_distance);
@@ -273,6 +283,7 @@ public:
               std::copy(depth_data_camera, depth_data_camera + size, camera_state.depth_data.begin());
           }
           camera_state.timestamp_us = robots[0].camera->last_update;
+          camera_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
           unsigned char *rgb_data_camera = (unsigned char *) robots[0].camera->FrameColor();
           if (size && rgb_data_camera) {
               camera_state.rgb_data.resize(size * 4);
@@ -398,6 +409,7 @@ struct StageSimulator
         }
         scan_data_dict["fov"] = logic->lidar_state.fov;
         scan_data_dict["timestamp_us"] = logic->lidar_state.timestamp_us;
+        scan_data_dict["clock_us"] = logic->lidar_state.clock_us;
         return scan_data_dict;
     }
 
@@ -406,6 +418,7 @@ struct StageSimulator
         py::dict depth_data_dict;
         std::vector<float> depth =  logic->camera_state.depth_data;
         depth_data_dict["timestamp_us"] = logic->camera_state.timestamp_us;
+        depth_data_dict["clock_us"] = logic->camera_state.clock_us;
         depth_data_dict["width"] = logic->camera_state.camera_width;
         depth_data_dict["height"] = logic->camera_state.camera_height;
         depth_data_dict["data"] = NULL;
@@ -421,6 +434,7 @@ struct StageSimulator
         py::dict rgb_data_dict;
         std::vector<unsigned char> rgb_data =  logic->camera_state.rgb_data;
         rgb_data_dict["timestamp_us"] = logic->camera_state.timestamp_us;
+        rgb_data_dict["clock_us"] = logic->camera_state.clock_us;
         rgb_data_dict["width"] = logic->camera_state.camera_width;
         rgb_data_dict["height"] = logic->camera_state.camera_height;
         rgb_data_dict["data"] = NULL;
@@ -436,6 +450,7 @@ struct StageSimulator
         py::dict robot_state_dict;
 
         robot_state_dict["timestamp_us"] = logic->robot_state.timestamp_us;
+        robot_state_dict["clock_us"] = logic->robot_state.clock_us;
         robot_state_dict["traction_left_distance_mm"] = logic->robot_state.traction_left_distance_mm;
         robot_state_dict["traction_right_distance_mm"] = logic->robot_state.traction_right_distance_mm;
         robot_state_dict["heading_angle_rad"] = logic->robot_state.heading_angle_rad;
