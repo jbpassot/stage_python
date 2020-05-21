@@ -298,9 +298,13 @@ public:
       // Sending motor command
       brainos_forward_speed = world_gui->linear * 1.5;
       brainos_angular_speed = -world_gui->angular * 0.5;
-
-      if (drive_command.timestamp_us > last_timestamp_us_command){
-          last_timestamp_us_command = drive_command.timestamp_us;
+      if (drive_command.timestamp_us > last_timestamp_us_command){ // buffer of 100ms
+          if (drive_command.timestamp_us > 100000){
+              last_timestamp_us_command = drive_command.timestamp_us - 100000;
+          }else{
+              last_timestamp_us_command = drive_command.timestamp_us;
+          }
+          if (last_timestamp_us_command > 100000)  last_timestamp_us_command -= 100000;
           brainos_forward_speed = (drive_command.traction_left_wheel_speed + drive_command.traction_right_wheel_speed) / 2.;
           brainos_angular_speed = (drive_command.traction_right_wheel_speed - drive_command.traction_left_wheel_speed) / robot_state.wheel_distance;
       }
