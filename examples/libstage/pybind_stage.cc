@@ -297,7 +297,7 @@ public:
 
       // Sending motor command
       brainos_forward_speed = world_gui->linear * 1.5;
-      brainos_angular_speed = -world_gui->angular * 0.5;
+      brainos_angular_speed = -world_gui->angular * 1.;
       if (drive_command.timestamp_us > last_timestamp_us_command){ // buffer of 100ms
           if (drive_command.timestamp_us > 100000){
               last_timestamp_us_command = drive_command.timestamp_us - 100000;
