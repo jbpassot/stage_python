@@ -63,6 +63,37 @@ public:
     {}
 };
 
+
+class TricycleDriveCommand{
+public:
+    Stg::usec_t timestamp_us;
+    Stg::usec_t clock_us;
+    double linear_velocity;
+    double steering_angle;
+
+    TricycleDriveCommand(): clock_us(0), timestamp_us(0), linear_velocity(0.), steering_angle(0.)
+    {}
+};
+
+class TricycleDriveState
+{
+public:
+
+    Stg::usec_t timestamp_us;
+    Stg::usec_t clock_us;
+    uint64_t traction_encoder;
+    double traction_distance_mm;
+    double steering_angle;
+    double heading_angle_rad;
+    double angular_velocity_rad_per_sec;
+    int tick_per_meter;
+
+    TricycleDriveState() : clock_us(0), timestamp_us(0), traction_encoder(0), traction_distance_mm(0.), steering_angle(0.),
+        heading_angle_rad(0.), angular_velocity_rad_per_sec(0.), tick_per_meter(1000)
+    {}
+};
+
+
 class LidarState{
 public:
     Stg::usec_t timestamp_us;
@@ -175,19 +206,20 @@ public:
           reinterpret_cast<Stg::ModelPosition *>(world->GetModel(name.str()));
         assert(posmod != 0);
 
-        robot_state.wheel_distance = posmod->wheeldistance;
+
+        drive_mode = posmod->GetDriveMode();
+        differential_drive_robot_state.wheel_distance = posmod->wheeldistance;
         robots[idx].position = posmod;
         robots[idx].position->Subscribe();
-
         robots[idx].fiducial = (Stg::ModelFiducial *)robots[idx].position->GetUnusedModelOfType("fiducial");
         robots[idx].fiducial ->AddCallback(Stg::Model::CB_UPDATE, (Stg::model_callback_t)FiducialUpdate, &fiducial_state);
         robots[idx].fiducial ->Subscribe();
-
+        
         robots[idx].bumpers = reinterpret_cast<Stg::ModelBumper *>(robots[idx].position->GetChild("bumper:0"));
           if (robots[idx].bumpers){
               robots[idx].bumpers->Subscribe();
           }
-
+        
         // get the robot's camera model and subscribe to it
         Stg::ModelCamera *cammod =
                 reinterpret_cast<Stg::ModelCamera *>(robots[idx].position->GetChild("camera:0"));
@@ -205,9 +237,9 @@ public:
         assert(rngmod != 0);
         robots[idx].ranger = rngmod;
         robots[idx].ranger->Subscribe();
-
+        
         Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
-
+        
         // register with the world
         world->AddUpdateCallback(Logic::Callback, reinterpret_cast<void *>(this));
   }
@@ -238,11 +270,12 @@ public:
   void Tick(Stg::World * world) {
       bool debug = false;
       Stg::WorldGui *world_gui = dynamic_cast<Stg::WorldGui *>(world);
-      double brainos_forward_speed;
-      double brainos_angular_speed;
+
 
       //Read status of the robot
       velocity = robots[0].position->GetVelocity();
+      state = robots[0].position->GetState();
+
       odom_pose = robots[0].position->GetPose();
       global_pose = robots[0].position->GetGlobalPose();
 
@@ -256,25 +289,10 @@ public:
       lidar_state.fov = robots[0].ranger->GetSensors()[0].fov;
       lidar_state.sample_count = robots[0].ranger->GetSensors()[0].sample_count;
 
-      // Filling robot state
-      const double interval((double)world->sim_interval / 1e6);
-      robot_state.timestamp_us = world->SimTimeNow();
-      //robot_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-      robot_state.clock_us = robots[0].position->last_clock_update;
-
-      double left_velocity = velocity.x - 0.5*(velocity.a*robot_state.wheel_distance);
-      double right_velocity = velocity.x + 0.5*(velocity.a*robot_state.wheel_distance);
-      robot_state.traction_left_distance_mm += (left_velocity*interval) * 1000.;
-      robot_state.traction_right_distance_mm += (right_velocity*interval) * 1000.;
-
-      robot_state.angular_velocity_rad_per_sec = velocity.a;
-      robot_state.heading_angle_rad += velocity.a * interval;
-
       if (_camera_enable != camera_state.enabled && robots[0].camera != NULL){
           _camera_enable = camera_state.enabled;
           robots[0].camera->enable_camera(_camera_enable);
       }
-
       // Filling Camera state
       if (camera_state.enabled && robots[0].camera != NULL && robots[0].camera->last_update > camera_state.timestamp_us) {
 
@@ -295,15 +313,54 @@ public:
           camera_state.timestamp_us = robots[0].camera->last_update;
       }
 
-      // Sending motor command
-      brainos_forward_speed = world_gui->linear * 1.5;
-      brainos_angular_speed = -world_gui->angular * 1.;
 
-      if (world->SimTimeNow() > buffer_motor_command_us  && drive_command.timestamp_us > world->SimTimeNow() - buffer_motor_command_us){
-          brainos_forward_speed = (drive_command.traction_left_wheel_speed + drive_command.traction_right_wheel_speed) / 2.;
-          brainos_angular_speed = (drive_command.traction_right_wheel_speed - drive_command.traction_left_wheel_speed) / robot_state.wheel_distance;
+      const double interval((double)world->sim_interval / 1e6);
+      if (drive_mode==Stg::ModelPosition::DRIVE_DIFFERENTIAL){
+          // Filling robot state
+          differential_drive_robot_state.timestamp_us = world->SimTimeNow();
+          //differential_drive_robot_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+          differential_drive_robot_state.clock_us = robots[0].position->last_clock_update;
+
+          double left_velocity = velocity.x - 0.5*(velocity.a * differential_drive_robot_state.wheel_distance);
+          double right_velocity = velocity.x + 0.5*(velocity.a * differential_drive_robot_state.wheel_distance);
+          differential_drive_robot_state.traction_left_distance_mm += (left_velocity * interval) * 1e3;
+          differential_drive_robot_state.traction_right_distance_mm += (right_velocity * interval) * 1e3;
+
+          differential_drive_robot_state.angular_velocity_rad_per_sec = velocity.a;
+          differential_drive_robot_state.heading_angle_rad += velocity.a * interval;
+
+          // Sending motor command
+          double brainos_forward_speed = world_gui->linear * 1.5;
+          double brainos_angular_speed = -world_gui->angular * 1.;
+
+          if (world->SimTimeNow() > buffer_motor_command_us && differential_drive_command.timestamp_us > world->SimTimeNow() - buffer_motor_command_us){
+              brainos_forward_speed = (differential_drive_command.traction_left_wheel_speed + differential_drive_command.traction_right_wheel_speed) / 2.;
+              brainos_angular_speed = (differential_drive_command.traction_right_wheel_speed - differential_drive_command.traction_left_wheel_speed) / differential_drive_robot_state.wheel_distance;
+          }
+          robots[0].position->SetSpeed(brainos_forward_speed, 0., brainos_angular_speed);
+      }else if(drive_mode==Stg::ModelPosition::DRIVE_CAR){
+          // Filling robot state
+          tricycle_drive_robot_state.timestamp_us = world->SimTimeNow();
+          //tricycle_drive_robot_state.clock_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+          tricycle_drive_robot_state.clock_us = robots[0].position->last_clock_update;
+          tricycle_drive_robot_state.angular_velocity_rad_per_sec = velocity.a;
+          tricycle_drive_robot_state.heading_angle_rad += velocity.a * interval;
+
+          tricycle_drive_robot_state.steering_angle = state.a;
+          tricycle_drive_robot_state.traction_encoder += state.x * interval * tricycle_drive_robot_state.tick_per_meter;
+          tricycle_drive_robot_state.traction_distance_mm += state.x * interval * 1e3;
+
+          // Sending motor command
+          double brainos_traction_speed_command = world_gui->linear * 1.5; //+ abs(world_gui->angular);
+          double brainos_steering_angle_command = -world_gui->angular * 1.57;
+          //if(world_gui->linear>0) brainos_steering_angle_command /= 2.;
+
+          if (world->SimTimeNow() > buffer_motor_command_us && tricycle_drive_command.timestamp_us > world->SimTimeNow() - buffer_motor_command_us){
+              brainos_traction_speed_command = tricycle_drive_command.linear_velocity;
+              brainos_steering_angle_command = tricycle_drive_command.steering_angle ;
+          }
+          robots[0].position->SetSpeed(brainos_traction_speed_command, 0., brainos_steering_angle_command);
       }
-      robots[0].position->SetSpeed(brainos_forward_speed, 0., brainos_angular_speed);
   }
 
 protected:
@@ -316,8 +373,12 @@ protected:
 
 
 public:
-    DifferentialDriveState robot_state;
-    DifferentialDriveCommand drive_command;
+    DifferentialDriveState differential_drive_robot_state;
+    DifferentialDriveCommand differential_drive_command;
+
+    TricycleDriveState tricycle_drive_robot_state;
+    TricycleDriveCommand tricycle_drive_command;
+
     LidarState lidar_state;
     CameraState camera_state;
     FiducialState fiducial_state;
@@ -326,6 +387,9 @@ public:
     Stg::Pose odom_pose;
     Stg::Pose global_pose;
     Stg::Velocity velocity;
+    Stg::Pose state;
+
+    Stg::ModelPosition::DriveMode drive_mode;
 
 };
 
@@ -451,13 +515,13 @@ struct StageSimulator
     {
         py::dict robot_state_dict;
 
-        robot_state_dict["timestamp_us"] = logic->robot_state.timestamp_us;
-        robot_state_dict["clock_us"] = logic->robot_state.clock_us;
-        robot_state_dict["traction_left_distance_mm"] = logic->robot_state.traction_left_distance_mm;
-        robot_state_dict["traction_right_distance_mm"] = logic->robot_state.traction_right_distance_mm;
-        robot_state_dict["heading_angle_rad"] = logic->robot_state.heading_angle_rad;
-        robot_state_dict["angular_velocity_rad_per_sec"] =  logic->robot_state.angular_velocity_rad_per_sec;
-        robot_state_dict["wheel_distance"] =  logic->robot_state.wheel_distance;
+        robot_state_dict["timestamp_us"] = logic->differential_drive_robot_state.timestamp_us;
+        robot_state_dict["clock_us"] = logic->differential_drive_robot_state.clock_us;
+        robot_state_dict["traction_left_distance_mm"] = logic->differential_drive_robot_state.traction_left_distance_mm;
+        robot_state_dict["traction_right_distance_mm"] = logic->differential_drive_robot_state.traction_right_distance_mm;
+        robot_state_dict["heading_angle_rad"] = logic->differential_drive_robot_state.heading_angle_rad;
+        robot_state_dict["angular_velocity_rad_per_sec"] =  logic->differential_drive_robot_state.angular_velocity_rad_per_sec;
+        robot_state_dict["wheel_distance"] =  logic->differential_drive_robot_state.wheel_distance;
         return robot_state_dict;
     }
 
@@ -473,7 +537,7 @@ struct StageSimulator
         return home_marker_dict;
     }
 
-    Stg::usec_t get_robot_state_timestamp_us(){return logic->robot_state.timestamp_us;}
+    Stg::usec_t get_robot_state_timestamp_us(){return logic->differential_drive_robot_state.timestamp_us;}
     Stg::usec_t get_depth_data_timestamp_us(){return logic->camera_state.timestamp_us;}
     Stg::usec_t get_rgb_data_timestamp_us(){return logic->camera_state.timestamp_us;}
     Stg::usec_t get_scan_data_timestamp_us(){return logic->lidar_state.timestamp_us;}
@@ -487,9 +551,9 @@ struct StageSimulator
     }
 
     void send_command(double traction_left_wheel_speed, double traction_right_wheel_speed) {
-        logic->drive_command.timestamp_us = world->SimTimeNow();
-        logic->drive_command.traction_left_wheel_speed = traction_left_wheel_speed;
-        logic->drive_command.traction_right_wheel_speed = traction_right_wheel_speed;
+        logic->differential_drive_command.timestamp_us = world->SimTimeNow();
+        logic->differential_drive_command.traction_left_wheel_speed = traction_left_wheel_speed;
+        logic->differential_drive_command.traction_right_wheel_speed = traction_right_wheel_speed;
     }
 
     bool step_simulation_async(int number_of_ms) {

@@ -5,7 +5,7 @@ define whiz_base position
 (
     #color "beige"			# Default color.
     color "blue"			# Default color.
-    drive "diff"		 	# Differential steering model.
+    drive "car"		 	# Differential steering model.
     gui_nose 1                  	# Draw a nose on the robot so we can see which way it points
     obstacle_return 1           	# Can hit things.
     ranger_return 0.5            	# reflects sonar beams
@@ -22,8 +22,8 @@ define whiz_base position
 
     # four DOF kinematics limits
     # [ xmin xmax ymin ymax zmin zmax amin amax ]
-    velocity_bounds [-0.5 0.5 0 0 0 0 -90.0 90.0 ]
-    acceleration_bounds [-0.5 0.5 0 0 0 0 -90 90.0 ]
+    velocity_bounds [-0.5 1.5 0 0 0 0 -90.0 90.0 ]
+    acceleration_bounds [-0.5 0.5 0 0 0 0 -200 200.0 ]
 
     trail_length 400
 )

@@ -2813,6 +2813,7 @@ public:
 private:
   Velocity velocity;
   Pose goal; ///< the current velocity or pose to reach, depending on the value of control_mode
+  Pose state; //the current velocity of pose, depending on the value of the control_mode
   ControlMode control_mode;
   DriveMode drive_mode;
   LocalizationMode localization_mode; ///< global or local mode
@@ -2835,12 +2836,15 @@ public:
   double wheeldistance;
   /** Get (a copy of) the model's velocity in its local reference
 frame. */
+  Pose GetState() const { return state; }
   Velocity GetVelocity() const { return velocity; }
   void SetVelocity(const Velocity &val);
   /** get the velocity of a model in the global CS */
   Velocity GetGlobalVelocity() const;
   /** set the velocity of a model in the global coordinate system */
   void SetGlobalVelocity(const Velocity &gvel);
+
+  DriveMode GetDriveMode(){return drive_mode;};
 
   /** Get (a copy of) the model's odometry integration error. */
   Velocity GetOdomError() const { return integration_error; }

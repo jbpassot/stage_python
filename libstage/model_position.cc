@@ -355,27 +355,42 @@ void ModelPosition::Update(void)
                    this->goal.a);
 
       switch (drive_mode) {
-      case DRIVE_DIFFERENTIAL:
-        // differential-steering model, like a Pioneer
-        vel.x = goal.x;
-        vel.y = 0;
-        vel.a = goal.a;
-        break;
+      case DRIVE_DIFFERENTIAL: {
+          // differential-steering model, like a Pioneer
+          state.x = goal.x;
+          state.a = goal.a;
 
-      case DRIVE_OMNI:
+          vel.x = state.x;
+          vel.y = 0;
+          vel.a = state.a;
+      }break;
+
+      case DRIVE_OMNI: {
         // direct steering model, like an omnidirectional robot
-        vel.x = goal.x;
-        vel.y = goal.y;
-        vel.a = goal.a;
-        break;
+        state.x = goal.x;
+        state.y = goal.y;
+        state.a = goal.a;
+        vel.x = state.x;
+        vel.y = state.y;
+        vel.a = state.a;
+      }break;
 
-      case DRIVE_CAR:
+      case DRIVE_CAR:{
         // car like steering model based on speed and turning angle
-        vel.x = goal.x * cos(goal.a);
-        vel.y = 0;
-        vel.a = goal.x * sin(goal.a) / wheelbase;
-        break;
+        // Constraint dynamics of the steering wheel
+        double step_a = goal.a-state.a;
+        const double interval((double)world->sim_interval / 1e6);
 
+        step_a = std::min(step_a, acceleration_bounds[3].max * interval);
+        step_a = std::max(step_a, acceleration_bounds[3].min * interval);
+
+        state.x = goal.x;
+        state.a += step_a;
+
+        vel.x = state.x * cos(state.a);
+        vel.y = 0;
+        vel.a = state.x * sin(state.a) / wheelbase;
+      }break;
       default: PRINT_ERR1("unknown steering mode %d", drive_mode);
       }
     } break;
